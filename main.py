@@ -5,12 +5,14 @@ import hmac
 import json
 import logging
 import os
+import uuid
 from datetime import datetime, timezone
 
 import aiohttp
 import database.database as db
 import keyboards as kb
 import websockets
+from aiohttp import web
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import StateFilter
 from aiogram.filters.command import Command
@@ -35,8 +37,10 @@ from bot_content import (
     price_text,
     prices_text,
     product_name,
+    round_rub_amount,
     tr,
     usdt_amount_text,
+    load_pricing_config,
 )
 from dotenv import load_dotenv
 
@@ -49,12 +53,22 @@ dp = Dispatcher(storage=MemoryStorage())
 db.set_bot(bot)
 
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "1867377574"))
+PLATEGA_MERCHANT_ID = os.getenv("PLATEGA_MERCHANT_ID")
+PLATEGA_SECRET = os.getenv("PLATEGA_SECRET")
+PLATEGA_BASE_URL = os.getenv("PLATEGA_BASE_URL", "https://app.platega.io")
+PLATEGA_RETURN_URL = os.getenv("PLATEGA_RETURN_URL")
+PLATEGA_FAILED_URL = os.getenv("PLATEGA_FAILED_URL")
+PLATEGA_CALLBACK_URL = os.getenv("PLATEGA_CALLBACK_URL")
+PLATEGA_LISTEN_HOST = os.getenv("PLATEGA_LISTEN_HOST", "127.0.0.1")
+PLATEGA_LISTEN_PORT = int(os.getenv("PLATEGA_LISTEN_PORT", "8080"))
 MENU_VARIANTS = {key: tuple(values.values()) for key, values in MENU_TEXT.items()}
 ADMIN_PRODUCT_CHOICES = {
     1: "anxieest",
     2: "coomeet",
     3: "mandy_rose",
 }
+
+
 def replace_price_line(text: str, display_price: str) -> str:
     lines = text.splitlines()
     for index, line in enumerate(lines):
@@ -63,6 +77,93 @@ def replace_price_line(text: str, display_price: str) -> str:
             lines[index] = f"{prefix}</b>: {display_price}"
             break
     return "\n".join(lines)
+
+
+def platega_amount_rub(price_usd: float | int) -> float:
+    pricing_config = load_pricing_config()
+    return float(
+        round_rub_amount(
+            float(price_usd) * float(pricing_config["usd_to_rub_rate"]),
+            int(pricing_config["rub_rounding_step"]),
+        )
+    )
+
+
+def build_platega_payload(user_id: int, product_code: str, plan_code: str) -> str:
+    return f"platega:{user_id}:{product_code}:{plan_code}:{uuid.uuid4().hex[:12]}"
+
+
+async def create_platega_checkout(user_id: int, product_code: str, plan_code: str) -> dict:
+    if not PLATEGA_MERCHANT_ID or not PLATEGA_SECRET:
+        raise RuntimeError("Platega credentials are not configured.")
+    if not PLATEGA_RETURN_URL or not PLATEGA_FAILED_URL:
+        raise RuntimeError("Platega return URLs are not configured.")
+
+    plan = PRODUCTS[product_code]["plans"][plan_code]
+    if plan.get("support_only"):
+        raise ValueError("This plan is support-only and cannot be paid automatically.")
+
+    amount_rub = platega_amount_rub(plan["price_usd"])
+    payload = build_platega_payload(user_id, product_code, plan_code)
+    description = f"{product_name(product_code, 'en')} | {plan_name(product_code, plan_code, 'en')} | user {user_id}"
+    request_body = {
+        "paymentDetails": {
+            "amount": amount_rub,
+            "currency": "RUB",
+        },
+        "description": description,
+        "return": PLATEGA_RETURN_URL,
+        "failedUrl": PLATEGA_FAILED_URL,
+        "payload": payload,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "X-MerchantId": PLATEGA_MERCHANT_ID,
+        "X-Secret": PLATEGA_SECRET,
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{PLATEGA_BASE_URL}/v2/transaction/process",
+            json=request_body,
+            headers=headers,
+        ) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                raise RuntimeError(f"Platega error {response.status}: {response_text}")
+            data = json.loads(response_text)
+
+    transaction_id = data.get("transactionId")
+    redirect_url = data.get("url") or data.get("redirect")
+    status = data.get("status", "PENDING")
+    if not transaction_id or not redirect_url:
+        raise RuntimeError(f"Unexpected Platega response: {data}")
+
+    await db.create_platega_payment(
+        user_id=user_id,
+        product_code=product_code,
+        plan_code=plan_code,
+        amount=amount_rub,
+        currency="RUB",
+        description=description,
+        payload=payload,
+        transaction_id=transaction_id,
+        redirect_url=redirect_url,
+        status=status,
+        payment_method=None,
+        payment_method_code=None,
+        return_url=PLATEGA_RETURN_URL,
+        failed_url=PLATEGA_FAILED_URL,
+        expires_in=data.get("expiresIn"),
+    )
+
+    return {
+        "transaction_id": transaction_id,
+        "payment_url": redirect_url,
+        "amount_rub": amount_rub,
+        "payload": payload,
+        "status": status,
+    }
 
 
 def build_faq_text(language: str, product_code: str) -> str:
@@ -681,6 +782,122 @@ async def send_access_result(target: Message, user_id: int, result: dict):
     await target.answer(text, parse_mode="HTML")
 
 
+async def send_access_result_to_user(user_id: int, result: dict):
+    language = await get_user_language(user_id)
+    product_label = product_name(result["product_code"], language)
+    is_extension = result.get("is_extension", False)
+
+    if is_extension:
+        if result["is_lifetime"]:
+            text = (
+                f"Your {product_label} access is already active for life."
+                if language == "en"
+                else f"Р’Р°С€ РґРѕСЃС‚СѓРї Рє {product_label} СѓР¶Рµ Р°РєС‚РёРІРµРЅ РЅР°РІСЃРµРіРґР°."
+            )
+        else:
+            end_date = result["subscription_end"].strftime("%Y-%m-%d")
+            text = (
+                f"Your {product_label} subscription has been extended. Active until {end_date}."
+                if language == "en"
+                else f"Р’Р°С€Р° РїРѕРґРїРёСЃРєР° РЅР° {product_label} Р±С‹Р»Р° РїСЂРѕРґР»РµРЅР°. РђРєС‚РёРІРЅР° РґРѕ {end_date}."
+            )
+        await bot.send_message(user_id, text, parse_mode="HTML")
+        return
+
+    if result["invite_link"]:
+        if result["is_lifetime"]:
+            text = (
+                f"Your {product_label} access is active for life.\nHere is your invite link:\n{result['invite_link']}"
+                if language == "en"
+                else f"Р’Р°С€ РґРѕСЃС‚СѓРї Рє {product_label} Р°РєС‚РёРІРёСЂРѕРІР°РЅ РЅР°РІСЃРµРіРґР°.\nР’РѕС‚ РІР°С€Р° СЃСЃС‹Р»РєР°-РїСЂРёРіР»Р°С€РµРЅРёРµ:\n{result['invite_link']}"
+            )
+        else:
+            end_date = result["subscription_end"].strftime("%Y-%m-%d")
+            text = (
+                f"Your {product_label} access is active until {end_date}.\nHere is your invite link:\n{result['invite_link']}"
+                if language == "en"
+                else f"Р’Р°С€ РґРѕСЃС‚СѓРї Рє {product_label} Р°РєС‚РёРІРёСЂРѕРІР°РЅ РґРѕ {end_date}.\nР’РѕС‚ РІР°С€Р° СЃСЃС‹Р»РєР°-РїСЂРёРіР»Р°С€РµРЅРёРµ:\n{result['invite_link']}"
+            )
+    else:
+        if result["is_lifetime"]:
+            text = (
+                f"Your {product_label} access is active for life.\n"
+                f"If the invite link was not generated automatically, contact support here:\n{SUPPORT_URL}"
+                if language == "en"
+                else f"Р’Р°С€ РґРѕСЃС‚СѓРї Рє {product_label} Р°РєС‚РёРІРёСЂРѕРІР°РЅ РЅР°РІСЃРµРіРґР°.\n"
+                f"Р•СЃР»Рё СЃСЃС‹Р»РєР°-РїСЂРёРіР»Р°С€РµРЅРёРµ РЅРµ Р±С‹Р»Р° СЃРіРµРЅРµСЂРёСЂРѕРІР°РЅР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё, РЅР°РїРёС€РёС‚Рµ РІ РїРѕРґРґРµСЂР¶РєСѓ СЃСЋРґР°:\n{SUPPORT_URL}"
+            )
+        else:
+            end_date = result["subscription_end"].strftime("%Y-%m-%d")
+            text = (
+                f"Your {product_label} access is active until {end_date}.\n"
+                f"If the invite link was not generated automatically, contact support here:\n{SUPPORT_URL}"
+                if language == "en"
+                else f"Р’Р°С€ РґРѕСЃС‚СѓРї Рє {product_label} Р°РєС‚РёРІРёСЂРѕРІР°РЅ РґРѕ {end_date}.\n"
+                f"Р•СЃР»Рё СЃСЃС‹Р»РєР°-РїСЂРёРіР»Р°С€РµРЅРёРµ РЅРµ Р±С‹Р»Р° СЃРіРµРЅРµСЂРёСЂРѕРІР°РЅР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё, РЅР°РїРёС€РёС‚Рµ РІ РїРѕРґРґРµСЂР¶РєСѓ СЃСЋРґР°:\n{SUPPORT_URL}"
+            )
+
+    await bot.send_message(user_id, text, parse_mode="HTML")
+
+
+async def send_platega_access_result_to_user(user_id: int, result: dict):
+    language = await get_user_language(user_id)
+    product_label = product_name(result["product_code"], language)
+    is_extension = result.get("is_extension", False)
+
+    if is_extension:
+        if result["is_lifetime"]:
+            text = (
+                f"Your {product_label} access is already active for life."
+                if language == "en"
+                else f"Ваш доступ к {product_label} уже активен навсегда."
+            )
+        else:
+            end_date = result["subscription_end"].strftime("%Y-%m-%d")
+            text = (
+                f"Your {product_label} subscription has been extended. Active until {end_date}."
+                if language == "en"
+                else f"Ваша подписка на {product_label} была продлена. Активна до {end_date}."
+            )
+        await bot.send_message(user_id, text, parse_mode="HTML")
+        return
+
+    if result["invite_link"]:
+        if result["is_lifetime"]:
+            text = (
+                f"Your {product_label} access is active for life.\nHere is your invite link:\n{result['invite_link']}"
+                if language == "en"
+                else f"Ваш доступ к {product_label} активирован навсегда.\nВот ваша ссылка-приглашение:\n{result['invite_link']}"
+            )
+        else:
+            end_date = result["subscription_end"].strftime("%Y-%m-%d")
+            text = (
+                f"Your {product_label} access is active until {end_date}.\nHere is your invite link:\n{result['invite_link']}"
+                if language == "en"
+                else f"Ваш доступ к {product_label} активирован до {end_date}.\nВот ваша ссылка-приглашение:\n{result['invite_link']}"
+            )
+    else:
+        if result["is_lifetime"]:
+            text = (
+                f"Your {product_label} access is active for life.\n"
+                f"If the invite link was not generated automatically, contact support here:\n{SUPPORT_URL}"
+                if language == "en"
+                else f"Ваш доступ к {product_label} активирован навсегда.\n"
+                f"Если ссылка-приглашение не была сгенерирована автоматически, напишите в поддержку сюда:\n{SUPPORT_URL}"
+            )
+        else:
+            end_date = result["subscription_end"].strftime("%Y-%m-%d")
+            text = (
+                f"Your {product_label} access is active until {end_date}.\n"
+                f"If the invite link was not generated automatically, contact support here:\n{SUPPORT_URL}"
+                if language == "en"
+                else f"Ваш доступ к {product_label} активирован до {end_date}.\n"
+                f"Если ссылка-приглашение не была сгенерирована автоматически, напишите в поддержку сюда:\n{SUPPORT_URL}"
+            )
+
+    await bot.send_message(user_id, text, parse_mode="HTML")
+
+
 @dp.message(Command("as"))
 async def add_subscription(message: types.Message):
     if message.from_user.id != ADMIN_USER_ID:
@@ -831,6 +1048,70 @@ async def list_subscriptions(message: types.Message):
             lines.append(f"- {label}: until {subscription.subscription_end.strftime('%Y-%m-%d')}")
 
     await message.reply("\n".join(lines))
+
+
+@dp.message(Command("platega_test"))
+async def platega_test(message: types.Message):
+    if message.from_user.id != ADMIN_USER_ID:
+        await message.reply("You are not authorized to use this command.")
+        return
+
+    args = message.text.split()
+    if len(args) < 3:
+        await message.reply(
+            "Usage:\n"
+            "/platega_test 1 lifetime\n"
+            "/platega_test 2 monthly\n"
+            "/platega_test 2 quarterly\n"
+            "/platega_test 3 yearly\n"
+            "/platega_test 2 monthly <user_id>"
+        )
+        return
+
+    try:
+        product_choice = int(args[1])
+    except ValueError:
+        await message.reply("Invalid product choice.")
+        return
+
+    product_code = ADMIN_PRODUCT_CHOICES.get(product_choice)
+    if product_code is None:
+        await message.reply("Unknown product. Use 1 for Anxieest, 2 for CooMeet, 3 for Mandy Rose.")
+        return
+
+    plan_code = args[2].strip().lower()
+    plan = PRODUCTS.get(product_code, {}).get("plans", {}).get(plan_code)
+    if plan is None:
+        await message.reply(f"Unknown plan '{plan_code}' for {product_name(product_code, 'en')}.")
+        return
+    if plan.get("support_only"):
+        await message.reply("This plan is support-only and cannot be used for automatic Platega testing.")
+        return
+
+    target_user_id = message.from_user.id
+    if len(args) >= 4:
+        try:
+            target_user_id = int(args[3])
+        except ValueError:
+            await message.reply("Invalid user_id.")
+            return
+
+    try:
+        payment = await create_platega_checkout(target_user_id, product_code, plan_code)
+    except Exception as e:
+        await message.reply(f"Failed to create Platega payment: {e}")
+        return
+
+    await message.reply(
+        "Platega test payment created.\n"
+        f"User ID: {target_user_id}\n"
+        f"Product: {product_name(product_code, 'en')}\n"
+        f"Plan: {plan_name(product_code, plan_code, 'en')}\n"
+        f"Amount: {payment['amount_rub']:.0f} RUB\n"
+        f"Transaction ID: {payment['transaction_id']}\n"
+        f"Callback URL: {PLATEGA_CALLBACK_URL}\n"
+        f"Payment URL:\n{payment['payment_url']}"
+    )
 
 
 @dp.message(Command("start"))
@@ -1138,6 +1419,82 @@ async def my_subscriptions(message: types.Message):
     await message.answer("\n".join(lines), parse_mode="HTML")
 
 
+async def platega_healthcheck(_: web.Request) -> web.Response:
+    return web.json_response(
+        {
+            "ok": True,
+            "service": "platega-callback",
+            "callback_url": PLATEGA_CALLBACK_URL,
+        }
+    )
+
+
+async def platega_callback(request: web.Request) -> web.Response:
+    try:
+        payload = await request.json()
+    except Exception:
+        return web.json_response({"ok": False, "error": "invalid_json"}, status=400)
+
+    transaction_id = str(payload.get("id") or "").strip()
+    status = str(payload.get("status") or "").upper()
+
+    if not transaction_id:
+        return web.json_response({"ok": False, "error": "missing_transaction_id"}, status=400)
+
+    payment = await db.get_platega_payment_by_transaction_id(transaction_id)
+    if payment is None:
+        return web.json_response({"ok": False, "error": "unknown_transaction"}, status=404)
+
+    await db.update_platega_payment_status(
+        transaction_id=transaction_id,
+        status=status or payment.status,
+        callback_payload=payload,
+        callback_status=status or None,
+        callback_processed=payment.callback_processed,
+    )
+
+    refreshed_payment = await db.get_platega_payment_by_transaction_id(transaction_id)
+    if refreshed_payment is None:
+        return web.json_response({"ok": False, "error": "payment_disappeared"}, status=500)
+
+    if status != "CONFIRMED":
+        return web.json_response({"ok": True, "message": f"status {status or 'UNKNOWN'} recorded"})
+
+    if refreshed_payment.callback_processed or refreshed_payment.activated_at is not None:
+        return web.json_response({"ok": True, "message": "duplicate callback ignored"})
+
+    try:
+        result = await db.activate_subscription(
+            refreshed_payment.user_id,
+            refreshed_payment.product_code,
+            refreshed_payment.plan_code,
+        )
+        await db.mark_platega_payment_activated(transaction_id)
+        try:
+            await send_platega_access_result_to_user(refreshed_payment.user_id, result)
+        except Exception:
+            logging.exception("Platega payment confirmed, but failed to notify user.")
+    except Exception:
+        logging.exception("Failed to activate Platega payment for transaction %s", transaction_id)
+        return web.json_response({"ok": False, "error": "activation_failed"}, status=500)
+
+    return web.json_response({"ok": True, "message": "payment confirmed and access granted"})
+
+
+async def run_platega_http_server():
+    app = web.Application()
+    app.router.add_get("/api/platega/health", platega_healthcheck)
+    app.router.add_post("/api/platega/callback", platega_callback)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, PLATEGA_LISTEN_HOST, PLATEGA_LISTEN_PORT)
+    await site.start()
+    logging.info("Platega callback server started on http://%s:%s", PLATEGA_LISTEN_HOST, PLATEGA_LISTEN_PORT)
+
+    await asyncio.Event().wait()
+
+
 async def main():
     ltc_rate, ton_rate = await asyncio.gather(get_crypto_rate("LTC"), get_crypto_rate("GRAM"))
     print(f"LTC rate: {ltc_rate}, TON rate: {ton_rate}")
@@ -1146,8 +1503,9 @@ async def main():
     auth_subscribe_task = asyncio.create_task(authenticate_and_ping())
     bot_task = asyncio.create_task(dp.start_polling(bot))
     scheduler_task = asyncio.create_task(db.scheduler())
+    platega_web_task = asyncio.create_task(run_platega_http_server())
 
-    await asyncio.gather(auth_subscribe_task, bot_task, scheduler_task)
+    await asyncio.gather(auth_subscribe_task, bot_task, scheduler_task, platega_web_task)
 
 
 if __name__ == "__main__":

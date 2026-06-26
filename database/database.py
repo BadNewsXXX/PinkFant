@@ -1,10 +1,11 @@
 import asyncio
+import json
 import os
 from datetime import datetime, timedelta, timezone
 
 from bot_content import DEFAULT_LANGUAGE, LIFETIME_END, PRODUCT_CHANNELS, PRODUCTS
 from dotenv import load_dotenv
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, select, text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -95,6 +96,34 @@ class UserTrack(Base):
     deposits = relationship("Deposit", back_populates="user")
 
 
+class PlategaPayment(Base):
+    __tablename__ = "platega_payments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    product_code = Column(String(50), nullable=False)
+    plan_code = Column(String(50), nullable=False)
+    payment_method = Column(Integer, nullable=True)
+    payment_method_code = Column(String(50), nullable=True)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), nullable=False, server_default="RUB")
+    description = Column(String(255), nullable=False)
+    payload = Column(String(255), nullable=False, unique=True)
+    transaction_id = Column(String(255), nullable=False, unique=True)
+    redirect_url = Column(String(2048), nullable=False)
+    return_url = Column(String(2048), nullable=True)
+    failed_url = Column(String(2048), nullable=True)
+    status = Column(String(50), nullable=False, server_default="PENDING")
+    expires_in = Column(String(20), nullable=True)
+    callback_status = Column(String(50), nullable=True)
+    callback_processed = Column(Boolean, nullable=False, server_default="false")
+    callback_received_at = Column(DateTime(timezone=True), nullable=True)
+    activated_at = Column(DateTime(timezone=True), nullable=True)
+    raw_callback = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -127,6 +156,10 @@ async def init_db():
         await conn.execute(text("ALTER TABLE pay_info ADD COLUMN IF NOT EXISTS duration_days INTEGER"))
         await conn.execute(text("ALTER TABLE pay_info ADD COLUMN IF NOT EXISTS is_lifetime BOOLEAN DEFAULT FALSE"))
         await conn.execute(text("ALTER TABLE pay_info ADD COLUMN IF NOT EXISTS channel_id BIGINT"))
+        await conn.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_platega_payments_transaction_id ON platega_payments (transaction_id)")
+        )
+        await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_platega_payments_payload ON platega_payments (payload)"))
 
 
 async def scheduler():
@@ -472,6 +505,116 @@ async def verify_and_activate_hash_payment(user_id: int, transaction_hash: str):
 
 async def provide_productStars(user_id: int, product_code: str, plan_code: str):
     return await activate_subscription(user_id, product_code, plan_code)
+
+
+async def create_platega_payment(
+    user_id: int,
+    product_code: str,
+    plan_code: str,
+    amount: float,
+    currency: str,
+    description: str,
+    payload: str,
+    transaction_id: str,
+    redirect_url: str,
+    status: str,
+    payment_method: int | None = None,
+    payment_method_code: str | None = None,
+    return_url: str | None = None,
+    failed_url: str | None = None,
+    expires_in: str | None = None,
+):
+    async with async_session() as session:
+        payment = PlategaPayment(
+            user_id=user_id,
+            product_code=product_code,
+            plan_code=plan_code,
+            payment_method=payment_method,
+            payment_method_code=payment_method_code,
+            amount=amount,
+            currency=currency,
+            description=description,
+            payload=payload,
+            transaction_id=transaction_id,
+            redirect_url=redirect_url,
+            return_url=return_url,
+            failed_url=failed_url,
+            status=status,
+            expires_in=expires_in,
+            updated_at=datetime.now(timezone.utc),
+        )
+        session.add(payment)
+        await session.commit()
+        await session.refresh(payment)
+        return payment
+
+
+async def get_platega_payment_by_transaction_id(transaction_id: str):
+    async with async_session() as session:
+        return await session.scalar(
+            select(PlategaPayment)
+            .where(PlategaPayment.transaction_id == transaction_id)
+            .order_by(PlategaPayment.id.desc())
+        )
+
+
+async def get_platega_payment_by_payload(payload: str):
+    async with async_session() as session:
+        return await session.scalar(
+            select(PlategaPayment)
+            .where(PlategaPayment.payload == payload)
+            .order_by(PlategaPayment.id.desc())
+        )
+
+
+async def update_platega_payment_status(
+    transaction_id: str,
+    status: str,
+    callback_payload: dict | None = None,
+    callback_status: str | None = None,
+    callback_processed: bool | None = None,
+):
+    async with async_session() as session:
+        payment = await session.scalar(
+            select(PlategaPayment)
+            .where(PlategaPayment.transaction_id == transaction_id)
+            .order_by(PlategaPayment.id.desc())
+        )
+        if payment is None:
+            return None
+
+        payment.status = status
+        payment.updated_at = datetime.now(timezone.utc)
+
+        if callback_status is not None:
+            payment.callback_status = callback_status
+        if callback_processed is not None:
+            payment.callback_processed = callback_processed
+        if callback_payload is not None:
+            payment.raw_callback = json.dumps(callback_payload, ensure_ascii=False)
+            payment.callback_received_at = datetime.now(timezone.utc)
+
+        await session.commit()
+        await session.refresh(payment)
+        return payment
+
+
+async def mark_platega_payment_activated(transaction_id: str):
+    async with async_session() as session:
+        payment = await session.scalar(
+            select(PlategaPayment)
+            .where(PlategaPayment.transaction_id == transaction_id)
+            .order_by(PlategaPayment.id.desc())
+        )
+        if payment is None:
+            return None
+
+        payment.activated_at = datetime.now(timezone.utc)
+        payment.callback_processed = True
+        payment.updated_at = datetime.now(timezone.utc)
+        await session.commit()
+        await session.refresh(payment)
+        return payment
 
 
 async def add_subscription(user_id: int, start_date: datetime, end_date: datetime):
