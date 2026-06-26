@@ -1022,7 +1022,7 @@ async def crypto_start(callback: CallbackQuery):
     await callback.answer("")
 
     if method_code == "ton":
-        crypto_rate = await get_crypto_rate("TON")
+        crypto_rate = await get_crypto_rate("GRAM")
         crypto_amount, payment_window_end = await db.initiate_paymentTON(user_id, product_code, plan_code, crypto_rate)
         text = build_ton_live_text(language, product_code, plan_code, user_id, crypto_amount, payment_window_end)
     else:
@@ -1139,7 +1139,7 @@ async def my_subscriptions(message: types.Message):
 
 
 async def main():
-    ltc_rate, ton_rate = await asyncio.gather(get_crypto_rate("LTC"), get_crypto_rate("TON"))
+    ltc_rate, ton_rate = await asyncio.gather(get_crypto_rate("LTC"), get_crypto_rate("GRAM"))
     print(f"LTC rate: {ltc_rate}, TON rate: {ton_rate}")
 
     await db.init_db()
