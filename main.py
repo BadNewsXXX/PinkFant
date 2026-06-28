@@ -166,6 +166,139 @@ async def create_platega_checkout(user_id: int, product_code: str, plan_code: st
     }
 
 
+async def create_platega_checkout_with_method(
+    user_id: int,
+    product_code: str,
+    plan_code: str,
+    payment_method: int,
+    payment_method_code: str,
+) -> dict:
+    if not PLATEGA_MERCHANT_ID or not PLATEGA_SECRET:
+        raise RuntimeError("Platega credentials are not configured.")
+    if not PLATEGA_RETURN_URL or not PLATEGA_FAILED_URL:
+        raise RuntimeError("Platega return URLs are not configured.")
+
+    plan = PRODUCTS[product_code]["plans"][plan_code]
+    amount_rub = platega_amount_rub(plan["price_usd"])
+    payload = build_platega_payload(user_id, product_code, plan_code)
+    description = f"{product_name(product_code, 'en')} | {plan_name(product_code, plan_code, 'en')} | user {user_id}"
+    request_body = {
+        "paymentMethod": payment_method,
+        "paymentDetails": {
+            "amount": amount_rub,
+            "currency": "RUB",
+        },
+        "description": description,
+        "return": PLATEGA_RETURN_URL,
+        "failedUrl": PLATEGA_FAILED_URL,
+        "payload": payload,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "X-MerchantId": PLATEGA_MERCHANT_ID,
+        "X-Secret": PLATEGA_SECRET,
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{PLATEGA_BASE_URL}/transaction/process",
+            json=request_body,
+            headers=headers,
+        ) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                raise RuntimeError(f"Platega error {response.status}: {response_text}")
+            data = json.loads(response_text)
+
+    transaction_id = data.get("transactionId")
+    redirect_url = data.get("url") or data.get("redirect")
+    status = data.get("status", "PENDING")
+    if not transaction_id or not redirect_url:
+        raise RuntimeError(f"Unexpected Platega response: {data}")
+
+    await db.create_platega_payment(
+        user_id=user_id,
+        product_code=product_code,
+        plan_code=plan_code,
+        amount=amount_rub,
+        currency="RUB",
+        description=description,
+        payload=payload,
+        transaction_id=transaction_id,
+        redirect_url=redirect_url,
+        status=status,
+        payment_method=payment_method,
+        payment_method_code=payment_method_code,
+        return_url=PLATEGA_RETURN_URL,
+        failed_url=PLATEGA_FAILED_URL,
+        expires_in=data.get("expiresIn"),
+    )
+
+    return {
+        "transaction_id": transaction_id,
+        "payment_url": redirect_url,
+        "amount_rub": amount_rub,
+        "payload": payload,
+        "status": status,
+    }
+
+
+def special_payment_flow(language: str, product_code: str, plan_code: str) -> bool:
+    if language == "ru":
+        return (
+            (product_code == "anxieest" and plan_code == "lifetime")
+            or (product_code in {"coomeet", "mandy_rose"} and plan_code in {"monthly", "quarterly", "yearly"})
+        )
+    if language == "en":
+        plan = PRODUCTS[product_code]["plans"].get(plan_code, {})
+        return not plan.get("support_only", False)
+    return False
+
+
+def special_payment_method_label(method_code: str, language: str) -> str:
+    labels = {
+        "sbp": {"en": "QR / SBP", "ru": "QR / СБП"},
+        "card": {"en": "Card", "ru": "Карта"},
+        "crypto": {"en": "Cryptocurrency", "ru": "Криптовалюта"},
+    }
+    return labels[method_code][language]
+
+
+def build_platega_payment_text(language: str, product_code: str, plan_code: str, method_code: str) -> str:
+    method = special_payment_method_label(method_code, language)
+    if language == "ru":
+        return (
+            f"<b>РЎРїРѕСЃРѕР± РѕРїР»Р°С‚С‹:</b> {method}\n"
+            f"<b>РџСЂРѕРґСѓРєС‚:</b> {product_name(product_code, language)}\n"
+            f"<b>РўР°СЂРёС„:</b> {plan_name(product_code, plan_code, language)}\n"
+            f"<b>РЎСѓРјРјР°:</b> {price_text(language, PRODUCTS[product_code]['plans'][plan_code]['price_usd'])}\n\n"
+            "РќР°Р¶РјРёС‚Рµ РєРЅРѕРїРєСѓ РЅРёР¶Рµ, С‡С‚РѕР±С‹ РѕС‚РєСЂС‹С‚СЊ СЃС‚СЂР°РЅРёС†Сѓ РѕРїР»Р°С‚С‹."
+        )
+    return (
+        f"<b>Payment method:</b> {method}\n"
+        f"<b>Product:</b> {product_name(product_code, language)}\n"
+        f"<b>Plan:</b> {plan_name(product_code, plan_code, language)}\n"
+        f"<b>Amount:</b> {price_text(language, PRODUCTS[product_code]['plans'][plan_code]['price_usd'])}\n\n"
+        "Use the button below to open the payment page."
+        if language == "en"
+        else f"<b>Способ оплаты:</b> {method}\n"
+        f"<b>Продукт:</b> {product_name(product_code, language)}\n"
+        f"<b>Тариф:</b> {plan_name(product_code, plan_code, language)}\n"
+        f"<b>Сумма:</b> {price_text(language, PRODUCTS[product_code]['plans'][plan_code]['price_usd'])}\n\n"
+        "Нажмите кнопку ниже, чтобы открыть страницу оплаты."
+    )
+
+
+def special_payment_method_label(method_code: str, language: str) -> str:
+    labels = {
+        "default": {"en": "QR / SBP / Crypto", "ru": "QR / СБП / Криптовалюта"},
+        "sbp": {"en": "QR / SBP", "ru": "QR / СБП"},
+        "card": {"en": "Card", "ru": "Карта"},
+        "crypto": {"en": "Cryptocurrency", "ru": "Криптовалюта"},
+    }
+    return labels[method_code][language]
+
+
 def build_faq_text(language: str, product_code: str) -> str:
     text = FAQ_TEXT[product_code][language]
     plans = PRODUCTS[product_code]["plans"]
@@ -1107,7 +1240,7 @@ async def platega_test(message: types.Message):
         f"User ID: {target_user_id}\n"
         f"Product: {product_name(product_code, 'en')}\n"
         f"Plan: {plan_name(product_code, plan_code, 'en')}\n"
-        f"Amount: {payment['amount_rub']:.0f} RUB\n"
+        f"Amount: {payment['amount_rub']:.0f} ₽\n"
         f"Transaction ID: {payment['transaction_id']}\n"
         f"Callback URL: {PLATEGA_CALLBACK_URL}\n"
         f"Payment URL:\n{payment['payment_url']}"
@@ -1200,7 +1333,7 @@ async def preview_selected(callback: CallbackQuery):
     await callback.answer("")
     await callback.message.edit_text(
         PREVIEW_TEXT[product_code][language],
-        reply_markup=kb.support_back(language),
+        reply_markup=kb.product_back(language, product_code),
     )
 
 
@@ -1221,6 +1354,107 @@ async def plan_selected(callback: CallbackQuery):
         build_plan_text(language, product_code, plan_code),
         parse_mode="HTML",
         reply_markup=kb.payment_methods(language, product_code, plan_code),
+    )
+
+
+@dp.callback_query(F.data.startswith("specialpay:"))
+async def special_payment_selected(callback: CallbackQuery):
+    _, action, product_code, plan_code, *rest = callback.data.split(":")
+    language = await get_user_language(callback.from_user.id)
+    user_id = callback.from_user.id
+    await callback.answer("")
+
+    if not special_payment_flow(language, product_code, plan_code):
+        await callback.message.edit_text(
+            build_plan_text(language, product_code, plan_code),
+            parse_mode="HTML",
+            reply_markup=kb.payment_methods(language, product_code, plan_code),
+        )
+        return
+
+    if action == "other":
+        await callback.message.edit_text(
+            build_plan_text(language, product_code, plan_code),
+            parse_mode="HTML",
+            reply_markup=kb.anxieest_ru_other_methods(product_code, plan_code),
+        )
+        return
+
+    if action == "crypto":
+        crypto_markup = (
+            kb.anxieest_ru_crypto_methods(product_code, plan_code)
+            if language == "ru"
+            else kb.en_crypto_methods(product_code, plan_code)
+        )
+        await callback.message.edit_text(
+            build_plan_text(language, product_code, plan_code),
+            parse_mode="HTML",
+            reply_markup=crypto_markup,
+        )
+        return
+
+    if action == "direct":
+        direct_markup = (
+            kb.anxieest_ru_direct_crypto(product_code, plan_code)
+            if language == "ru"
+            else kb.en_direct_crypto(product_code, plan_code)
+        )
+        await callback.message.edit_text(
+            build_plan_text(language, product_code, plan_code),
+            parse_mode="HTML",
+            reply_markup=direct_markup,
+        )
+        return
+
+    if action == "cryptopay":
+        text = "CryptoPay will be added later." if language == "en" else "CryptoPay добавим чуть позже."
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.simple_back(language, f"specialpay:crypto:{product_code}:{plan_code}"),
+        )
+        return
+
+    if action != "checkout" or not rest:
+        return
+
+    method_code = rest[0]
+    if method_code == "card":
+        return
+
+    method_settings = {
+        "default": {"payment_method": None, "back_callback": f"plan:{product_code}:{plan_code}"},
+        "crypto": {"payment_method": 13, "back_callback": f"specialpay:crypto:{product_code}:{plan_code}"},
+    }
+    settings = method_settings.get(method_code)
+    if settings is None:
+        return
+
+    try:
+        if method_code == "default":
+            payment = await create_platega_checkout(user_id, product_code, plan_code)
+        else:
+            payment = await create_platega_checkout_with_method(
+                user_id,
+                product_code,
+                plan_code,
+                settings["payment_method"],
+                method_code,
+            )
+    except Exception as e:
+        await callback.message.edit_text(
+            (
+                f"Не удалось создать платёж: {e}"
+                if language == "ru"
+                else f"Failed to create payment: {e}"
+            ),
+            reply_markup=kb.simple_back(language, settings["back_callback"]),
+        )
+        return
+
+    await callback.message.edit_text(
+        build_platega_payment_text(language, product_code, plan_code, method_code),
+        parse_mode="HTML",
+        reply_markup=kb.payment_link(language, payment["payment_url"], settings["back_callback"]),
     )
 
 

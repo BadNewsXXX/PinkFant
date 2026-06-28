@@ -114,7 +114,7 @@ PRODUCTS = {
                         "💰<b>Price</b>: 10$\n"
                         "🔗 After your purchase, private channel link will be sent to you.\n"
                         "⏳<b>Duration</b> : Forever ✅\n\n"
-                        "⚠️ The price of this video on her OnlyFans was $30. After some time, Anxieest completely cleared her OnlyFans, and the content is no longer available there. For more detailed information, please read the FAQ."
+                        "❗️ This is rare archival material that was previously on her OnlyFans but was later removed."
                         ),
                     "ru": (
                         "В приватном канале с Anxieest есть :\n"
@@ -123,7 +123,7 @@ PRODUCTS = {
                         "💰<b>Стоимость</b>: 10$\n"
                         "🔗 После покупки Вам будет отправлена ссылка в приватный канал.\n"
                         "⏳<b>Длительность</b> : Навсегда ✅\n\n"
-                        "⚠️ Стоимость данного видео на её OnlyFans - было 30$. Спустя какое-то время Anxieest очистила OnlyFans полностью и контента там нет. Для более подробной информации прочтите FAQ."
+                        "❗️ Это редкий архивный материал, который ранее был на её OnlyFans, но в последствии был удалён."
                     ),
                 "description": {
                     "en": "Purchase permanent access to the channel",
@@ -163,20 +163,20 @@ PRODUCTS = {
                 "custom_text": {
                     "en": (
                         "Inside the private channel you’ll get:\n"
-                        "• 1000+ videos from Coomeet with a wide variety of content\n"
-                        "• All content is exclusive — you won’t find it anywhere else\n\n"
-                        "⚠️ <b>Important:</b>\n"
-                        "Content is updated weekly. Private channel subscribers can take part in regular polls to decide which model will be featured next.\n\n\n"
+                        "• 500+ videos from Coomeet girls featuring a wide variety of content from different countries.\n"
+                        "• A large part of the collection includes content that is not publicly available.\n\n"
+                        "❗️ <b>Updates</b>\n"
+                        "Content is updated regularly. Private channel subscribers can also take part in polls and influence which model will appear in future updates.\n\n\n"
                         "💰<b>Price</b>: 6$\n"
                         "🔗 After purchase, you’ll receive access to a private channel\n"
                         "⏳<b>Duration</b> : 1 month ✅"
                     ),
                     "ru": (
                         "В приватном канале есть :\n"
-                        "• 1000+ видео слитых девушек Coomeet с абсолютно разным контентом.\n"
-                        "• Контент куплен мной поэтому найти его где-то ещё Вы не сможете.\n\n"
-                        "⚠️ <b>Важно:</b>\n"
-                        "Контент обновляется еженедельно. Для подписчиков приватного канала регулярно проводятся опросы, где вы можете выбрать, с какой моделью будет следующий контент.\n\n\n"
+                        "• 500+ видео девушек Coomeet с разным контентом и из разных стран.\n"
+                        "• Большая часть контента - эксклюзив, которого нет в открытом доступе.\n\n"
+                        "❗️ <b>Обновления</b>\n"
+                        "Контент обновляется на постоянной основе. Подписчики приватного канала могут участвовать в опросах и влиять на то, с какой моделью выйдет следующий контент.\n\n\n"
                         "💰<b>Стоимость</b>: 6$\n"
                         "🔗 После покупки Вам будет отправлена ссылка в приватный канал.\n"
                         "⏳<b>Длительность</b> : 1 месяц ✅"
@@ -215,20 +215,20 @@ PRODUCTS = {
                 "custom_text": {
                     "en": (
                         "Inside the private channel you’ll get:\n"
-                        "• 1000+ videos from Coomeet with a wide variety of content\n"
-                        "• All content is exclusive — you won’t find it anywhere else\n\n"
-                        "⚠️ <b>Important:</b>\n"
-                        "Content is updated weekly. Private channel subscribers can take part in regular polls to decide which model will be featured next.\n\n\n"
+                        "• 500+ videos from Coomeet girls featuring a wide variety of content from different countries.\n"
+                        "• A large part of the collection includes content that is not publicly available.\n\n"
+                        "❗️ <b>Updates</b>\n"
+                        "Content is updated regularly. Private channel subscribers can also take part in polls and influence which model will appear in future updates.\n\n\n"
                         "💰<b>Price</b>: 14$\n"
                         "🔗 After purchase, you’ll receive access to a private channel\n"
                         "⏳<b>Duration</b> : 3 months ✅"
                     ),
                     "ru": (
                         "В приватном канале есть :\n"
-                        "• 1000+ видео слитых девушек Coomeet с абсолютно разным контентом.\n"
-                        "• Контент куплен мной поэтому найти его где-то ещё Вы не сможете.\n\n"
-                        "⚠️ <b>Важно:</b>\n"
-                        "Контент обновляется еженедельно. Для подписчиков приватного канала регулярно проводятся опросы, где вы можете выбрать, с какой моделью будет следующий контент.\n\n\n"
+                        "• 500+ видео девушек Coomeet с разным контентом и из разных стран.\n"
+                        "• Большая часть контента - эксклюзив, которого нет в открытом доступе.\n\n"
+                        "❗️ <b>Обновления</b>\n"
+                        "Контент обновляется на постоянной основе. Подписчики приватного канала могут участвовать в опросах и влиять на то, с какой моделью выйдет следующий контент.\n\n\n"
                         "💰<b>Стоимость</b>: 14$\n"
                         "🔗 После покупки Вам будет отправлена ссылка в приватный канал.\n"
                         "⏳<b>Длительность</b> : 3 месяца ✅"
@@ -267,20 +267,20 @@ PRODUCTS = {
                 "custom_text": {
                     "en": (
                         "Inside the private channel you’ll get:\n"
-                        "• 1000+ videos from Coomeet with a wide variety of content\n"
-                        "• All content is exclusive — you won’t find it anywhere else\n\n"
-                        "⚠️ <b>Important:</b>\n"
-                        "Content is updated weekly. Private channel subscribers can take part in regular polls to decide which model will be featured next.\n\n\n"
+                        "• 500+ videos from Coomeet girls featuring a wide variety of content from different countries.\n"
+                        "• A large part of the collection includes content that is not publicly available.\n\n"
+                        "❗️ <b>Updates</b>\n"
+                        "Content is updated regularly. Private channel subscribers can also take part in polls and influence which model will appear in future updates.\n\n\n"
                         "💰<b>Price</b>: 49$\n"
                         "🔗 After purchase, you’ll receive access to a private channel\n"
                         "⏳<b>Duration</b> : 12 months ✅"
                     ),
                     "ru": (
                         "В приватном канале есть :\n"
-                        "• 1000+ видео слитых девушек Coomeet с абсолютно разным контентом.\n"
-                        "• Контент куплен мной поэтому найти его где-то ещё Вы не сможете.\n\n"
-                        "⚠️ <b>Важно:</b>\n"
-                        "Контент обновляется еженедельно. Для подписчиков приватного канала регулярно проводятся опросы, где вы можете выбрать, с какой моделью будет следующий контент.\n\n\n"
+                        "• 500+ видео девушек Coomeet с разным контентом и из разных стран.\n"
+                        "• Большая часть контента - эксклюзив, которого нет в открытом доступе.\n\n"
+                        "❗️ <b>Обновления</b>\n"
+                        "Контент обновляется на постоянной основе. Подписчики приватного канала могут участвовать в опросах и влиять на то, с какой моделью выйдет следующий контент.\n\n\n"
                         "💰<b>Стоимость</b>: 49$\n"
                         "🔗 После покупки Вам будет отправлена ссылка в приватный канал.\n"
                         "⏳<b>Длительность</b> : 12 месяцев ✅"
@@ -305,7 +305,7 @@ PRODUCTS = {
                 "support_only": True,
                 "custom_text": {
                     "en": "💎 Lifetime access is available upon request.\nContact support for more details.",
-                    "ru": "Пожизненный доступ доступен по индивидуальному запросу.\nДля получения подробной информации обратитесь в поддержку.",
+                    "ru": "👑 Пожизненный доступ доступен в индивидуальном формате.\nСвяжитесь с поддержкой, чтобы узнать подробности и условия получения доступа.",
                 },
             },
         }
@@ -343,8 +343,7 @@ PRODUCTS = {
                         "• Mandy Sacs's OnlyFans content (current and previous)\n"
                         "• Mandy Sacs's Fansly content (previous)\n"
                         "• Mandy Sacs's Fantime content (previous)\n\n"
-                        "⚠️ <b>Important:</b>\n"
-                        "Mandy does not have any other adult platform besides OF, but this channel combines her previous materials from different sources in one place.\n\n\n"
+                        "❗️ Collection includes content from multiple platforms in one place.\n\n\n"
                         "💰<b>Price</b>: 5$\n"
                         "🔗 After purchase, you’ll receive access to a private channel\n"
                         "⏳<b>Duration</b> : 1 month ✅"
@@ -353,8 +352,7 @@ PRODUCTS = {
                         "В приватном канале есть :\n"
                         "• Весь контент с её OnlyFans 🔞\n"
 	                    "• Удалённый контент с Fantime 🔞\n"
-                        "⚠️ <b>Важно:</b>\n"
-                        "У Mandy нет других платформ кроме OF, но в этом канале собраны её прошлые материалы из разных источников в одном месте.\n\n\n"
+                        "• Удалённый контент с Fansly 🔞\n\n\n"
                         "💰<b>Стоимость</b>: 5$\n"
                         "🔗 После покупки Вам будет отправлена ссылка в приватный канал.\n"
                         "⏳<b>Длительность</b> : 1 месяц ✅"
@@ -380,8 +378,7 @@ PRODUCTS = {
                         "• Mandy Sacs's OnlyFans content (current and previous)\n"
                         "• Mandy Sacs's Fansly content (previous)\n"
                         "• Mandy Sacs's Fantime content (previous)\n\n"
-                        "⚠️ <b>Important:</b>\n"
-                        "Mandy does not have any other adult platform besides OF, but this channel combines her previous materials from different sources in one place.\n\n\n"
+                        "❗️ Collection includes content from multiple platforms in one place.\n\n\n"
                         "💰<b>Price</b>: 12$\n"
                         "🔗 After purchase, you’ll receive access to a private channel\n"
                         "⏳<b>Duration</b> : 3 months ✅"
@@ -390,8 +387,7 @@ PRODUCTS = {
                         "В приватном канале есть :\n"
                         "• Весь контент с её OnlyFans 🔞\n"
 	                    "• Удалённый контент с Fantime 🔞\n"
-                        "⚠️ <b>Важно:</b>\n"
-                        "У Mandy нет других платформ кроме OF, но в этом канале собраны её прошлые материалы из разных источников в одном месте.\n\n\n"
+                        "• Удалённый контент с Fansly 🔞\n\n\n"
                         "💰<b>Стоимость</b>: 12$\n"
                         "🔗 После покупки Вам будет отправлена ссылка в приватный канал.\n"
                         "⏳<b>Длительность</b> : 3 месяцa ✅"
@@ -417,8 +413,7 @@ PRODUCTS = {
                         "• Mandy Sacs's OnlyFans content (current and previous)\n"
                         "• Mandy Sacs's Fansly content (previous)\n"
                         "• Mandy Sacs's Fantime content (previous)\n\n"
-                        "⚠️ <b>Important:</b>\n"
-                        "Mandy does not have any other adult platform besides OF, but this channel combines her previous materials from different sources in one place.\n\n\n"
+                        "❗️ Collection includes content from multiple platforms in one place.\n\n\n"
                         "💰<b>Price</b>: 39$\n"
                         "🔗 After purchase, you’ll receive access to a private channel\n"
                         "⏳<b>Duration</b> : 12 months ✅"
@@ -427,8 +422,7 @@ PRODUCTS = {
                         "В приватном канале есть :\n"
                         "• Весь контент с её OnlyFans 🔞\n"
                         "• Удалённый контент с Fantime 🔞\n"
-                        "⚠️ <b>Важно:</b>\n"
-                        "У Mandy нет других платформ кроме OF, но в этом канале собраны её прошлые материалы из разных источников в одном месте.\n\n\n"
+                        "• Удалённый контент с Fansly 🔞\n\n\n"
                         "💰<b>Стоимость</b>: 39$\n"
                         "🔗 После покупки Вам будет отправлена ссылка в приватный канал.\n"
                         "⏳<b>Длительность</b> : 12 месяцев ✅"
@@ -453,7 +447,7 @@ PRODUCTS = {
                 "support_only": True,
                 "custom_text": {
                     "en": "💎 Lifetime access is available upon request.\nContact support for more details.",
-                    "ru": "Пожизненный доступ доступен по индивидуальному запросу.\nДля получения подробной информации обратитесь в поддержку.",
+                    "ru": "👑 Пожизненный доступ доступен в индивидуальном формате.\nСвяжитесь с поддержкой, чтобы узнать подробности и условия получения доступа.",
                 },
             },
         },
@@ -479,45 +473,44 @@ SUPPORT_TEXT = {
     "en": (
         "<b>1. Why PinkLeak is worth it</b> 💎\n\n"
         "We collect content from various platforms and models to provide it to you at reasonable and affordable prices. "
-        "On official platforms (OnlyFans, Coomeet, etc.), content is often overpriced.\n"
-        "Our goal is to give you the best content without unnecessary overpaying or limitations.\n"
-        "Your support helps us grow and improve the service.\n\n"
+        "On official platforms (OnlyFans, Coomeet, etc.), content is often overpriced.\n\n"
+        "❗️ A significant part of the content is not publicly available.\n\n"
+        "Our goal is to give you the best content without unnecessary overpaying or limitations. Your support helps us grow and improve the service.\n\n"
         "<b>2. Payment issues</b> 💳\n\n"
-        "Having trouble with your payment?\n\n"
         "Did you complete a payment but something went wrong?\n"
         "Send us a direct message — we’ll quickly help you sort it out. Our support is available 24/7.\n\n"
         "<b>3. No convenient payment method</b> ⚙️\n\n"
-        "Can’t find a suitable payment method?\n\n"
-        "If you’re experiencing difficulties with payment (for example, using cryptocurrency) or couldn’t find a convenient option, feel free to message us.\n"
-        "We’ll do our best to find a solution that works for you. Support is available 24/7. 🟢\n\n"
+        "Can’t find a suitable payment method?\n"
+        "If none of the available payment methods work for you, feel free to message us. We’ll do our best to find a convenient solution.\n"
+        "Support is available 24/7. 🟢\n\n"
         "<b>4. Content samples</b> 👀\n\n"
-        "Go to Subscriptions and open any product you want. You’ll see a “Content Preview” button where you can preview the content before purchasing.\n\n"
-        "<b>5. Will there be more content?</b> 📈\n\n"
-        "Yes, we are continuously expanding our library and adding new models. Upcoming updates include content featuring Laisey Evans, Dana Brooke(WWE) and careful_i_bite(bongacams).\n"
-        "We also welcome your suggestions and take user requests into account.\n\n\n"
+        "Open Subscriptions and choose any product you’re interested in. Then tap Content Preview to view sample content before purchasing.\n\n"
+        "<b>5. Will new models and categories be added?</b> 😈\n\n"
+        "Yes, we plan to expand our content library based on the interests of our audience.\n"
+        "If you’d like to influence future updates, take part in the poll using the link below.\n\n\n"
         "<b>Need more help?</b> 🤝\n"
         f"If you read the all answers above and still need help, contact support: {SUPPORT_URL}\n\n\n\n"
         "Privacy policy: https://telegra.ph/Privacy-Policy-06-09-143\n"
         "User agreement: https://telegra.ph/User-Agreement-06-09-57"
     ),
     "ru": (
-        "<b>1. Почему PinkLeak — это выгодно?</b>\n\n"
+        "<b>1. Почему PinkLeak — это выгодно?</b> 💎\n\n"
         "Мы собираем контент с разных платформ и от разных моделей, чтобы предоставить его вам по доступным и удобным ценам.\n\n"
         "На официальных площадках (OnlyFans, Coomeet и др.) стоимость контента часто завышена, а также могут возникать сложности с оплатой и пополнением баланса.\n\n"
+        "❗️ Значительная часть материалов недоступна в открытом доступе.\n\n"
         "Наша цель - дать вам лучший контент без лишних переплат и ограничений.\n"
         "Ваша поддержка помогает нам развиваться и делать сервис ещё лучше.\n\n"
-        "<b>2. Возникли проблемы при оплате</b>\n\n"
+        "<b>2. Возникли проблемы при оплате</b> 💳\n\n"
         "Оплатили, но платёж не прошёл или возникла ошибка?\n"
         "Напишите нам в личные сообщения - мы быстро поможем разобраться. Поддержка работает 24/7.\n\n"
-        "<b>3. Не нашли удобный способ оплаты</b>\n\n"
+        "<b>3. Не нашли удобный способ оплаты</b> ⚙️\n\n"
         "Если у вас возникли сложности с оплатой (например, при использовании криптовалюты) или не нашли подходящий способ, напишите нам в личные сообщения.\n"
-        "Мы постараемся подобрать для вас удобное решение. Поддержка доступна 24/7.\n\n"
-        "<b>4. Примеры контента</b>\n\n"
+        "Мы постараемся подобрать для вас удобное решение. Поддержка доступна 24/7. 🟢\n\n"
+        "<b>4. Примеры контента</b> 👀\n\n"
         "Зайдите в Подписки, далее выберите любой интересующий вас продукт и там выберите 'Превью контента'.\n\n"
-        "<b>5. Будут ли пополнения контента?</b>\n\n"
-        "Да, мы постоянно работаем над расширением контента и добавлением новых моделей.\n\n"
-        "Уже запланированы обновления с участием Laisey Evans, Dana Brooke (WWE), а так же careful_i_bite(bongacams).\n"
-        "Также мы открыты к вашим предложениям и учитываем пожелания пользователей.\n\n"
+        "<b>5. Будут ли добавляться новые модели и направления?</b> 😈\n\n"
+        "Да, мы планируем расширять библиотеку контента на основе интересов нашей аудитории.\n\n"
+        "Если вы хотите повлиять на будущие обновления, примите участие в опросе по ссылке ниже.\n\n\n"
         f"Если вы прочитали ответы на вопросы выше, но не нашли решение, напишите в поддержку: {SUPPORT_URL}\n\n\n\n"
         "Политика конфиденциальности: https://telegra.ph/Politika-konfidencialnosti-04-01-26\n"
         "Пользовательское соглашение: https://telegra.ph/Polzovatelskoe-soglashenie-04-01-19"
@@ -527,13 +520,12 @@ SUPPORT_TEXT = {
 FAQ_TEXT = {
     "anxieest": {
         "en": (
-            "<b>Anxieest</b> is known for her funny and corny jokes that she posts on TikTok and Instagram.\n\n"
-            "At one point, she created an OnlyFans “just for fun,” as she explained it herself — and that’s pretty much how it turned out: for a long time, there was no content posted there at all. <b>BUT!</b>\n"
-            "One day I was surprised when I checked her OF — she started posting some kind of lifestyle content there: selfies, everyday moments, lifestyle and similar stuff that obviously doesn’t really attract people on OF.\n"
-            "With understanding of the whole situation, she posted 2 photos of her juicy ass and then she made a video with ass plug and masturbation. I immediately purchased this content. It costs me 30$ for 1 video.\n\n"
-            "After some time, it seems like she got worried about her career or had other reasons, and ended up deleting EVERYTHING from her OnlyFans. Now it’s completely empty, and that content can’t be found anywhere.\n\n"
-            "So, I have an offer for you! 🔥\n"
-            "In my private channel : 2 photos of her ass + that 1 dirty video 🔞\n"
+            "<b>Anxieest</b> is known for the funny and corny jokes she posts on TikTok and Instagram.\n\n"
+            "At one point, she created an OnlyFans “just for fun,” as she put it — and for a long time, that really seemed to be the case, since there was no content there at all. But then something changed.\n"
+            "One day, I checked her OnlyFans and was surprised to see that she had started posting lifestyle content: selfies, everyday moments, and similar material that usually isn’t what people come to OF for. Then, unexpectedly, she posted 2 photos of her juicy ass and later uploaded a video featuring a butt plug and masturbation. I immediately bought this content. It cost me $30 for that single video.\n"
+            "After some time, it seems she became concerned about her career, or had other reasons, and ended up deleting everything from her OnlyFans. Now the page is completely empty, and that content can’t be found anywhere.\n\n"
+            "Here’s our offer for you! 🔥\n"
+            "In our private channel : 2 photos of her ass and that butt plug + masturbation video 🔞\n"
             "💰<b>Price</b>: 10$\n"
             "🔗 After your purchase, private channel link will be sent to you.\n"
             "⏳<b>Duration</b> : Forever ✅"
@@ -542,12 +534,12 @@ FAQ_TEXT = {
         "ru": (
             "<b>Anxieest</b> известна благодаря своим смешным и пошлым шуткам, которые она выкладывает в тик-ток/инстаграм. \n\n"
             "Однажды она создала OnlyFans <b>'по приколу'</b> как она это объяснила и впринципе так оно и оказалось : постов там вообще никаких не было долгое время. <b>НО ТУТ СЛУЧИЛОСЬ ЧУДО!</b>\n\n"
-            "Однажды я охуел когда зашёл к ней в один из прекрасных солнечных дней : она начала постить туда какой-то лайф контент, лицо, и всякую такую хуйню которая очевидно никому на Онлике не сдалась. С пониманием этого Настюша сначала запостила 2 фотографии своей сладкой попки, а после планета вообще охуела : Настя запостила видео с пробкой в попке и мастурбацией ещё и с дилдо. \n"
-            "Я конечно же не долго думая, всё это дело купил. За видос Настюша попросила аж целые <b>30$</b>, от чего я конечно же знатно прихуел. \n\n"
-            "Спустя какое-то время Настюша видимо испугалась что может загубить свою карьеру либо ещё по каким-то причинам удалила ВСЁ, что было на Онлике. Сейчас там пусто и этого контента нигде нет. Ну может у каких-нибудь американцев разве что. \n\n"
-            "Поэтому у меня есть предложение для Вас! 🔥\n"
+            "Однажды я очень удивился когда зашёл к ней на Онлик : она начала постить туда какой-то лайф контент, лицо, и всякий подобный мусор который очевидно никому на Онлике не интересен. С пониманием этого Настюша сначала запостила 2 фотографии своей сладкой попки, а после вошла во вкус : Настя запостила видео с пробкой в попке и мастурбацией с дилдо. \n"
+            "Я конечно же не долго думая, всё это дело купил. За видос Настюша попросила аж целые <b>30$</b>, от чего я конечно же знатно <s>охуел</s> был недоволен . \n\n"
+            "Спустя какое-то время Настюша видимо испугалась, что может загубить свою карьеру, либо ещё по каким-то причинам удалила ВСЁ, что было на Онлике. Сейчас там пусто и этого контента нигде нет. Ну может у каких-нибудь американцев разве что. \n\n"
+            "Поэтому у нас есть предложение для Вас! 🔥\n"
             "В приватном канале с Anxieest есть :\n"
-            "2 фото её попки + то самое 1 видео 🔞\n"
+            "2 фото её попки и видео мастурбации с анальной пробкой + дилдо 🔞\n"
             "💰<b>Стоимость</b>: 10$\n"
             "🔗 После покупки Вам будет отправлена ссылка в приватный канал.\n"
             "⏳<b>Длительность</b> : Навсегда ✅"
@@ -556,35 +548,33 @@ FAQ_TEXT = {
     },
     "coomeet": {
         "en": (
-            "Coomeet is a dating platform with its own pros and cons.\n"
-            "The main downside? You need a solid budget.\n"
-            "To get any real content, you usually have to:\n"
-            "1. Start a call (which already requires high balance)\n"
-            "2. And right after the call, send a gift (some really hot girls even asking for 50 minutes and more)\n\n"
-            "Many girls won’t even do anything until you’ve spent a decent amount — some expect long calls and expensive gifts before showing anything at all. If you know the platform, you know what I mean.\n"
-            "But there’s also a big advantage: There are a lot of different girls, with completely different styles of content and pricing.\n"
-            "I tried to find content online — but it’s simply not there.\n"
-            "A lot of Coomeet content is unavailable on sites like camwhores and others where videos are only visible to admins or the person who uploaded them.\n"
-            "So I decided to collect my own exclusive content.\n"
-            "I’ve gathered a large collection of interesting material — all recorded and compiled personally. The collection will continue to grow: more videos and call recordings will be added soon.\n"
-            "I also made sure to select the best content possible, because Coomeet is full of total nonsense, grannies, and all sorts of other weird stuff.\n\n\n"
-            "So here’s my offer for you! 🔥\n"
+            "<b>Coomeet</b> is a roulette platform for <s>chatting</s> adult content, flirting, and everything around it. Like any platform, it has its pros and cons.\n"
+            "<b>What’s the problem?</b>\n"
+            "Getting good content directly is expensive, time-consuming, inconvenient, and often unpredictable: searching takes a lot of time, minutes disappear quickly, and the quality of the content doesn’t always justify the cost.\n\n"
+            "<b>What does PinkLeak do?</b>\n"
+            "We collect, filter, and organize the best content from the platform, including material that is difficult to find in the public domain.\n"
+            "This gives you instant access to a large collection without wasting extra time or money.\n\n"
+            "❗️ <b>Updates</b>\n"
+            "Content is updated regularly. Private channel subscribers can also take part in polls and influence which model will appear in future updates.\n\n"
+            "Here’s our offer for you! 🔥\n"
             "Inside the private channel you’ll get:\n"
-            "• 1000+ videos from Coomeet with a wide variety of content\n"
-            "• All content is exclusive — you won’t find it anywhere else\n"
+            "500+ videos from Coomeet girls featuring a wide variety of content from different countries. A large part of the collection includes content that is not publicly available.\n"
             "💰<b>Price</b>: 6$ / 14$ / 49$\n"
             "🔗 After purchase, you’ll receive access to a private channel\n"
             "⏳<b>Duration</b> : 1 / 3 / 12 months ✅"
         ),
         "ru": (
-            "<b>Coomeet</b> - сайт для знакомств. У площадки есть много минусов и плюсов. Минусы - быть богатым. Для того, чтобы получить хоть какой-то контент, ты должен (так говорят куметовские(охуевшие) девочки): \n"
-            "1. Созвониться (иметь норм баланс) \n2. После созвона сразу же сделать подарок (некоторые вообще просят по 50 минут и больше, кто знает площадку тот поймёт о чем я) и только потом они разденутся или хотя бы встанут со стула. Плюсы - много девушек с абсолютно разным контентом и разными ценниками.\n\n"
-            "Пытался искать какой-нибудь контент в гугле - но его просто нет. Куча контента с Coomeet просто недоступно на сайтах типа camwhores и остальных, где видео доступны только админам либо пользователю, кто сам и добавил видео. \n\n"
-            "Я собрал для Вас много <b>СВОЕГО</b> интересного эксклюзивного контента. Весь контент будет пополняться, скоро будет больше видео + записей звонков. \n\n"
-            "Девушек старался выбирать самых нормальных, потому что в Coomeet очень много пиздеца, бабушек и всяких других приколов.\n\n\n"
-            "Поэтому у меня есть предложение для Вас! 🔥\n"
+            "<b>Coomeet</b> - рулетка для <s>общения</s> разврата/порно и всего остального. У площадки есть свои минусы и плюсы.\n"
+            "<b>В чём проблема?</b>\n"
+            "Получить хороший контент напрямую - дорого, долго, неудобно и часто непредсказуемо: поиск занимает много времени, минуты быстро расходуются, а качество и результат не всегда оправдывают ожидания.\n\n"
+            "<b>Чем занимается PinkLeak?</b>\n"
+            "Мы собираем, отбираем и структурируем лучший контент с площадки, включая материалы, которые сложно найти в открытом доступе.\n"
+            "Это позволяет вам получить доступ сразу к большой подборке без лишних трат времени и денег.\n\n"
+            "❗️ <b>Обновления</b>\n"
+            "Контент обновляется на постоянной основе. Подписчики приватного канала могут участвовать в опросах и влиять на то, с какой моделью выйдет следующий контент.\n\n"
+            "Поэтому у нас есть предложение для Вас! 🔥\n"
             "В приватном канале есть :\n"
-            "1000+ видео слитых девушек Coomeet с абсолютно разным контентом. Контент куплен мной поэтому найти его где-то ещё Вы не сможете.\n"
+            "500+ видео девушек Coomeet с разным контентом и из разных стран. Большая часть контента - эксклюзив, которого нет в открытом доступе.\n"
             "💰<b>Стоимость</b>: 6$ / 14$ / 49$\n"
             "🔗 После покупки Вам будет отправлена ссылка в приватный канал.\n"
             "⏳<b>Длительность</b> : 1 / 3 / 12 месяцев ✅"
@@ -592,28 +582,26 @@ FAQ_TEXT = {
     },
     "mandy_rose": {
         "en": (
-            "<b>Mandy Rose</b> is an American professional wrestler best known for her work in WWE and NXT. I don’t think she needs any introduction, but I’ll give a brief overview.\n\n"
-            "Mandy Rose spent a long time performing in the ring, and that was her main job. Then Mandy created a Fantime account and started posting juicy and dirty content. \n\n"
-            "At first, the content was “relatively mild” and Mandy didn’t show much + the angles and content were super shitty compared to regular models on OnlyFans. But later, she loosened up and created an OnlyFans account from Fantime, starting to post more professional content and showing off her amazing forms 😏.\n"
-            "Fantime was eventually deleted, and she switched completely to OnlyFans. Now she’s doing collabs with Laisey Evans (also a wrestler friend) and other models.\n\n"
-            "! ! ! Mandy has also started posting content with her husband. The content there is pretty good.\n\n"
-            "Her monthly subscription cost: $8. 3 months: $20.\n"
-            "I have a proposal for you! 🔥"
-            "In the private channel :\n"
-            "• All content from her OnlyFans 🔞\n"
-	        "• Deleted content from Fantime 🔞\n"
+            "<b>Mandy Rose</b> is an American wrestler best known for her work in WWE and NXT. She hardly needs any introduction.\n\n"
+            "For a long time, wrestling was Mandy’s main focus. Later, she launched her Fantime page, where she began posting exclusive content.\n"
+            "At first, the content was relatively soft and reserved. But over time, Mandy became much more open, eventually creating an OnlyFans and moving to a more explicit and professional style of content. Fantime was later removed, and she fully transitioned to OnlyFans.\n"
+            "She now also does collaborations with Laisey Evans (WWE superstar) and other models.\n\n"
+            "❗️ Mandy has also started posting content with her husband, and the material there is especially hot. 🔥\n\n"
+            "That’s why we’ve put together a private collection for you 🔥:\n"
+            "Inside the private channel you’ll get:\n"
+            "• All of her OnlyFans content 🔞\n"
+            "• Deleted content from Fantime 🔞\n"
             "💰<b>Price</b>: $5 / $12 / $39\n"
             "🔗 After purchase, you will be sent a link to the private channel.\n"
             "⏳<b>Duration</b>: 1 / 3 / 12 months ✅"
             
         ),
         "ru": (
-            "<b>Mandy Rose</b> - американская рестлерша, более известная благодаря WWE а так же NXT. Думаю данную персону представлять не стоит, но минимально расскажу.\n\n"
-            "Mandy Rose долгое время выступала на ринге и это было её основной деятельностью. Далее Mandy захотела поискать дополнительный доход, потому что Урус нужно было чем-то заправлять и она создала площадку Fantime и начала выкладывать сочный и грязный контент. Большинство людей охуело, потому что такого ожидать никто не мог. Ранее WWE очень серьёзно относились к подобным вещам и запрещали рестлершам иметь OnlyFans или подобные площадки. \n"
-            "Сначала контент был 'аккуратным' и Mandy много чего не показывала + ракурсы и контент был супер хуёвым если сравнивать с нормальными моделями с Онлика. Но позже дама раскрепостилась и уже из Fantime создала OnlyFans и начала постить уже более профессиональный контент + светить своими огромными прелестями. Fantime в последствии был удалён и она полностью перешла на Онлик. Сейчас делает коллабы с Laisey Evans(тоже подружка-рестлерша) и другими моделями потому что запросики уже стали серьёзные и от второго Уруса отказываться не хочется.\n\n"
-            "! ! ! Так же Mandy начала постить контент со своим огромным мужиком (мужем). Контент там весьма неплохой.\n\n"
-            "Стоимость её подписки в месяц : 8$. 3 месяца : 20$.\n"
-            "+ В СНГ сейчас депозит на OF стал проблемным, поэтому у меня есть предложение для Вас! 🔥"
+            "<b>Mandy Rose</b> - американская рестлерша, более известная благодаря WWE а так же NXT. Думаю данную персону представлять не стоит.\n\n"
+            "Mandy Rose долгое время выступала на ринге и это было её основной деятельностью. Далее Mandy создала площадку Fantime и начала выкладывать сочный и грязный контент.\n"
+            "Сначала контент был 'аккуратным' и Mandy много чего не показывала. Но позже дама раскрепостилась и уже из Fantime создала OnlyFans и начала постить уже более профессиональный контент + светить своими огромными прелестями. Fantime в последствии был удалён и она полностью перешла на OnlyFans. \nСейчас делает коллабы с Laisey Evans(тоже подружка-рестлерша) и другими моделями.\n\n"
+            "❗️ Так же Mandy начала постить контент со своим мужем. Контент там весьма горячий 🔥\n\n"
+            "На OnlyFans доступ к её контенту стоит от 8$ в месяц. Для пользователей из СНГ оплата и пополнение баланса сейчас часто связаны с трудностями, поэтому у нас есть более удобное решение для Вас. 🔥\n"
             "В приватном канале есть :\n"
             "• Весь контент с её OnlyFans 🔞\n"
 	        "• Удалённый контент с Fantime 🔞\n"
@@ -638,8 +626,8 @@ UI_TEXT = {
         "ru": "Привет. Выберите, что хотите открыть ниже.",
     },
     "products_welcome": {
-        "en": "Welcome to PinkLeak ✨\n\nA private collection of exclusive content, carefully selected for you 😈\nTo explore the content, please choose an option below or visit the FAQ section.",
-        "ru": "Добро пожаловать в PinkLeak ✨\n\nКоллекция эксклюзивного контента ждёт тебя 😈\nДля ознакомления с нашим контентом, выберите вариант ниже из списка, либо перейдите в FAQ.",
+        "en": "Welcome to PinkLeak ✨\n\nA private collection of exclusive content 😈\nTo explore the content, please choose an option below.",
+        "ru": "Добро пожаловать в PinkLeak ✨\n\nКоллекция эксклюзивного контента ждёт тебя 😈\nДля ознакомления с нашим контентом, выберите вариант ниже из списка.",
     },
     "menu_ready": {
         "en": "Menu",
@@ -823,7 +811,7 @@ def price_text(language: str, price_usd: float | int) -> str:
             float(price_usd) * float(pricing_config["usd_to_rub_rate"]),
             int(pricing_config["rub_rounding_step"]),
         )
-        return f"{format_integer_amount(rub_amount)} RUB"
+        return f"{format_integer_amount(rub_amount)} ₽"
     return f"{format_usd_amount(price_usd)}$"
 
 
@@ -849,6 +837,16 @@ def product_name(product_code: str, language: str) -> str:
 
 
 def plan_name(product_code: str, plan_code: str, language: str) -> str:
+    if language == "ru" and product_code in {"coomeet", "mandy_rose"}:
+        overrides = {
+            "quarterly": "Премиум на 3 месяца (выгодно)💎",
+            "monthly": "Премиум на 1 месяц",
+            "yearly": "Премиум на 12 месяцев",
+            "lifetime_request": "Пожизненный доступ 👑",
+        }
+        if plan_code in overrides:
+            return overrides[plan_code]
+
     plan = PRODUCTS[product_code]["plans"][plan_code]
     return plan["title"].get(language, plan["title"][DEFAULT_LANGUAGE])
 

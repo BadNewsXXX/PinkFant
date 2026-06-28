@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 
-from bot_content import LANGUAGE_NAMES, MENU_TEXT, PAYMENT_METHOD_TEXT, PRODUCTS, menu_text, tr
+from bot_content import LANGUAGE_NAMES, MENU_TEXT, PAYMENT_METHOD_TEXT, PRODUCTS, menu_text, price_text, tr
 
 
 def language_selector() -> InlineKeyboardMarkup:
@@ -86,6 +86,18 @@ def product_back(language: str, product_code: str) -> InlineKeyboardMarkup:
 
 
 def product_plans(language: str, product_code: str) -> InlineKeyboardMarkup:
+    custom_order = None
+    custom_labels = {}
+
+    if language == "ru" and product_code in {"coomeet", "mandy_rose"}:
+        custom_order = ["quarterly", "monthly", "yearly", "lifetime_request"]
+        custom_labels = {
+            "quarterly": "Премиум на 3 месяца (выгодно)💎",
+            "monthly": "Премиум на 1 месяц",
+            "yearly": "Премиум на 12 месяцев",
+            "lifetime_request": "Пожизненный доступ 👑",
+        }
+
     rows = [
         [
             InlineKeyboardButton(
@@ -94,15 +106,22 @@ def product_plans(language: str, product_code: str) -> InlineKeyboardMarkup:
             )
         ]
     ]
-    rows.extend([
+    plan_items = PRODUCTS[product_code]["plans"].items()
+    if custom_order is not None:
+        ordered_codes = [code for code in custom_order if code in PRODUCTS[product_code]["plans"]]
+        plan_items = [(plan_code, PRODUCTS[product_code]["plans"][plan_code]) for plan_code in ordered_codes]
+
+    rows.extend(
         [
-            InlineKeyboardButton(
-                text=plan["button"][language],
-                callback_data=f"plan:{product_code}:{plan_code}",
-            )
+            [
+                InlineKeyboardButton(
+                    text=custom_labels.get(plan_code, plan["button"][language]),
+                    callback_data=f"plan:{product_code}:{plan_code}",
+                )
+            ]
+            for plan_code, plan in plan_items
         ]
-        for plan_code, plan in PRODUCTS[product_code]["plans"].items()
-    ])
+    )
     rows.append(
         [
             InlineKeyboardButton(
@@ -115,8 +134,18 @@ def product_plans(language: str, product_code: str) -> InlineKeyboardMarkup:
 
 
 def payment_methods(language: str, product_code: str, plan_code: str) -> InlineKeyboardMarkup:
+    if language == "ru" and (
+        (product_code == "anxieest" and plan_code == "lifetime")
+        or (product_code in {"coomeet", "mandy_rose"} and plan_code in {"monthly", "quarterly", "yearly"})
+    ):
+        return anxieest_ru_payment_menu(product_code, plan_code)
+    if language == "en":
+        return en_payment_menu(product_code, plan_code)
+
     rows = []
-    for method_code in ("manual", "trc20", "ton", "ltc", "stars", "da"):
+    method_codes = ["trc20", "ton", "ltc", "stars"]
+
+    for method_code in method_codes:
         rows.append(
             [
                 InlineKeyboardButton(
@@ -134,6 +163,151 @@ def payment_methods(language: str, product_code: str, plan_code: str) -> InlineK
         ]
     )
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def en_payment_menu(product_code: str, plan_code: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💰 Crypto", callback_data=f"specialpay:crypto:{product_code}:{plan_code}")],
+            [InlineKeyboardButton(text="⭐️ Telegram Stars", callback_data=f"payment:{product_code}:{plan_code}:stars")],
+            [InlineKeyboardButton(text="💳 Donation Alerts (Card)", callback_data=f"payment:{product_code}:{plan_code}:da")],
+            [InlineKeyboardButton(text="Back to menu", callback_data=f"product:{product_code}")],
+        ]
+    )
+
+
+def en_crypto_methods(product_code: str, plan_code: str) -> InlineKeyboardMarkup:
+    amount = price_text("en", PRODUCTS[product_code]["plans"][plan_code]["price_usd"])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"✅ Pay {amount}",
+                    callback_data=f"specialpay:checkout:{product_code}:{plan_code}:crypto",
+                )
+            ],
+            [InlineKeyboardButton(text="💰 CryptoPay", callback_data=f"specialpay:cryptopay:{product_code}:{plan_code}")],
+            [InlineKeyboardButton(text="✉️ Direct payment", callback_data=f"specialpay:direct:{product_code}:{plan_code}")],
+            [InlineKeyboardButton(text="Back", callback_data=f"plan:{product_code}:{plan_code}")],
+        ]
+    )
+
+
+def en_direct_crypto(product_code: str, plan_code: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="USDT (TRC20)", callback_data=f"payment:{product_code}:{plan_code}:trc20")],
+            [InlineKeyboardButton(text="Toncoin (TON)", callback_data=f"payment:{product_code}:{plan_code}:ton")],
+            [InlineKeyboardButton(text="Litecoin (LTC)", callback_data=f"payment:{product_code}:{plan_code}:ltc")],
+            [InlineKeyboardButton(text="Back", callback_data=f"specialpay:crypto:{product_code}:{plan_code}")],
+        ]
+    )
+
+
+def anxieest_ru_payment_menu(product_code: str, plan_code: str) -> InlineKeyboardMarkup:
+    amount = price_text("ru", PRODUCTS[product_code]["plans"][plan_code]["price_usd"])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"💳 Оплатить {amount} (QR/СБП)",
+                    callback_data=f"specialpay:checkout:{product_code}:{plan_code}:default",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Другие способы оплаты",
+                    callback_data=f"specialpay:other:{product_code}:{plan_code}",
+                )
+            ],
+            [InlineKeyboardButton(text="Назад в меню", callback_data=f"product:{product_code}")],
+        ]
+    )
+
+
+def anxieest_ru_other_methods(product_code: str, plan_code: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="💳 Оплатить картой",
+                    callback_data=f"specialpay:checkout:{product_code}:{plan_code}:card",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="💰 Криптовалюта",
+                    callback_data=f"specialpay:crypto:{product_code}:{plan_code}",
+                )
+            ],
+            [InlineKeyboardButton(text="⭐️ Телеграм звёзды", callback_data=f"payment:{product_code}:{plan_code}:stars")],
+            [InlineKeyboardButton(text="Назад", callback_data=f"plan:{product_code}:{plan_code}")],
+        ]
+    )
+
+
+def anxieest_ru_crypto_methods(product_code: str, plan_code: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ Оплатить",
+                    callback_data=f"specialpay:checkout:{product_code}:{plan_code}:crypto",
+                )
+            ],
+            [InlineKeyboardButton(text="💰 CryptoPay", callback_data=f"specialpay:cryptopay:{product_code}:{plan_code}")],
+            [InlineKeyboardButton(text="✉️ Оплатить напрямую", callback_data=f"specialpay:direct:{product_code}:{plan_code}")],
+            [InlineKeyboardButton(text="Назад", callback_data=f"specialpay:other:{product_code}:{plan_code}")],
+        ]
+    )
+
+
+def anxieest_ru_direct_crypto(product_code: str, plan_code: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="USDT (TRC20)", callback_data=f"payment:{product_code}:{plan_code}:trc20")],
+            [InlineKeyboardButton(text="Toncoin (TON)", callback_data=f"payment:{product_code}:{plan_code}:ton")],
+            [InlineKeyboardButton(text="Litecoin (LTC)", callback_data=f"payment:{product_code}:{plan_code}:ltc")],
+            [InlineKeyboardButton(text="Назад", callback_data=f"specialpay:crypto:{product_code}:{plan_code}")],
+        ]
+    )
+
+
+def anxieest_ru_crypto_methods(product_code: str, plan_code: str) -> InlineKeyboardMarkup:
+    amount = price_text("ru", PRODUCTS[product_code]["plans"][plan_code]["price_usd"])
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=f"✅ Оплатить {amount}",
+                    callback_data=f"specialpay:checkout:{product_code}:{plan_code}:crypto",
+                )
+            ],
+            [InlineKeyboardButton(text="💰 CryptoPay", callback_data=f"specialpay:cryptopay:{product_code}:{plan_code}")],
+            [InlineKeyboardButton(text="✉️ Оплатить напрямую", callback_data=f"specialpay:direct:{product_code}:{plan_code}")],
+            [InlineKeyboardButton(text="Назад", callback_data=f"specialpay:other:{product_code}:{plan_code}")],
+        ]
+    )
+
+
+def payment_link(language: str, payment_url: str, back_callback: str) -> InlineKeyboardMarkup:
+    open_label = "Открыть оплату" if language == "ru" else "Open payment"
+    back_label = "Назад" if language == "ru" else "Back"
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=open_label, url=payment_url)],
+            [InlineKeyboardButton(text=back_label, callback_data=back_callback)],
+        ]
+    )
+
+
+def simple_back(language: str, callback_data: str) -> InlineKeyboardMarkup:
+    back_label = "Назад" if language == "ru" else "Back"
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=back_label, callback_data=callback_data)],
+        ]
+    )
 
 
 def hash_confirmation(language: str, product_code: str, plan_code: str) -> InlineKeyboardMarkup:
