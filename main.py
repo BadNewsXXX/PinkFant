@@ -401,8 +401,8 @@ async def create_betatransfer_checkout(user_id: int, product_code: str, plan_cod
         "currency": BETATRANSFER_CURRENCY,
         "urlResult": BETATRANSFER_CALLBACK_URL,
         "locale": locale,
-        "fullCallback": BETATRANSFER_FULL_CALLBACK,
         "user_comment": description,
+        "fullCallback": BETATRANSFER_FULL_CALLBACK,
     }
     if BETATRANSFER_PAYMENT_SYSTEM:
         request_body["paymentSystem"] = BETATRANSFER_PAYMENT_SYSTEM
