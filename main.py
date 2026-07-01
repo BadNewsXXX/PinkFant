@@ -151,23 +151,9 @@ BETATRANSFER_SIGN_FIELDS = [
     "orderId",
     "amount",
     "currency",
-    "paymentSystem",
     "urlResult",
-    "urlSuccess",
-    "urlFail",
     "locale",
-    "redirect",
     "payerId",
-    "payerPhone",
-    "payerName",
-    "payerEmail",
-    "payer_firstname",
-    "payer_lastname",
-    "payer_postcode",
-    "payer_address",
-    "payer_country",
-    "ip",
-    "user_comment",
     "fullCallback",
 ]
 
@@ -177,7 +163,6 @@ def build_betatransfer_request_body(user_id: int, product_code: str, plan_code: 
     locale = betatransfer_locale(language)
     amount = betatransfer_amount(plan["price_usd"], BETATRANSFER_CURRENCY)
     order_id = build_betatransfer_order_id(user_id, product_code, plan_code)
-    description = f"{product_name(product_code, 'en')} | {plan_name(product_code, plan_code, 'en')} | user {user_id}"
 
     request_body = {
         "orderId": order_id,
@@ -186,15 +171,8 @@ def build_betatransfer_request_body(user_id: int, product_code: str, plan_code: 
         "urlResult": BETATRANSFER_CALLBACK_URL,
         "locale": locale,
         "payerId": str(user_id),
-        "user_comment": description,
         "fullCallback": BETATRANSFER_FULL_CALLBACK,
     }
-    if BETATRANSFER_PAYMENT_SYSTEM:
-        request_body["paymentSystem"] = BETATRANSFER_PAYMENT_SYSTEM
-    if BETATRANSFER_SUCCESS_URL:
-        request_body["urlSuccess"] = BETATRANSFER_SUCCESS_URL
-    if BETATRANSFER_FAIL_URL:
-        request_body["urlFail"] = BETATRANSFER_FAIL_URL
 
     return request_body, order_id, locale
 
@@ -361,7 +339,7 @@ async def create_betatransfer_checkout(user_id: int, product_code: str, plan_cod
 
     request_body, order_id, locale = build_betatransfer_request_body(user_id, product_code, plan_code, language)
     amount = request_body["amount"]
-    description = request_body["user_comment"]
+    description = f"{product_name(product_code, 'en')} | {plan_name(product_code, plan_code, 'en')} | user {user_id}"
 
     request_body["sign"] = generate_betatransfer_signature(
         build_betatransfer_signature_params(request_body, BETATRANSFER_SIGN_FIELDS),
