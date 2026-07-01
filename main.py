@@ -147,86 +147,11 @@ def build_betatransfer_order_id(user_id: int, product_code: str, plan_code: str)
     return f"bt-{user_id}-{product_part}-{plan_part}-{suffix}"[:40]
 
 
-BETATRANSFER_SIGN_VARIANTS: list[tuple[str, list[str]]] = [
-    (
-        "doc_full",
-        [
-            "orderId",
-            "amount",
-            "currency",
-            "paymentSystem",
-            "urlResult",
-            "urlSuccess",
-            "urlFail",
-            "locale",
-            "redirect",
-            "payerId",
-            "payerPhone",
-            "payerName",
-            "payerEmail",
-            "payer_firstname",
-            "payer_lastname",
-            "payer_postcode",
-            "payer_address",
-            "payer_country",
-            "ip",
-            "user_comment",
-            "fullCallback",
-        ],
-    ),
-    (
-        "doc_minimal",
-        [
-            "orderId",
-            "amount",
-            "currency",
-            "paymentSystem",
-            "urlResult",
-            "locale",
-            "user_comment",
-            "fullCallback",
-        ],
-    ),
-    (
-        "legacy_amount_first",
-        [
-            "amount",
-            "currency",
-            "orderId",
-            "paymentSystem",
-            "urlResult",
-            "urlSuccess",
-            "urlFail",
-            "user_comment",
-            "fullCallback",
-            "locale",
-        ],
-    ),
-    (
-        "legacy_minimal",
-        [
-            "amount",
-            "currency",
-            "orderId",
-            "paymentSystem",
-            "urlResult",
-            "user_comment",
-            "fullCallback",
-            "locale",
-        ],
-    ),
-    (
-        "without_comment",
-        [
-            "orderId",
-            "amount",
-            "currency",
-            "paymentSystem",
-            "urlResult",
-            "locale",
-            "fullCallback",
-        ],
-    ),
+BETATRANSFER_SIGN_FIELDS = [
+    "orderId",
+    "amount",
+    "currency",
+    "fullCallback",
 ]
 
 
@@ -411,37 +336,22 @@ async def create_betatransfer_checkout(user_id: int, product_code: str, plan_cod
     if BETATRANSFER_FAIL_URL:
         request_body["urlFail"] = BETATRANSFER_FAIL_URL
 
+    request_body["sign"] = generate_betatransfer_signature(
+        build_betatransfer_signature_params(request_body, BETATRANSFER_SIGN_FIELDS),
+        BETATRANSFER_SECRET_KEY,
+    )
+
     params = {"token": BETATRANSFER_API_KEY}
-    data = None
-    last_error: str | None = None
-    used_sign_variant: str | None = None
-
     async with aiohttp.ClientSession() as session:
-        for variant_name, sign_fields in BETATRANSFER_SIGN_VARIANTS:
-            request_body["sign"] = generate_betatransfer_signature(
-                build_betatransfer_signature_params(request_body, sign_fields),
-                BETATRANSFER_SECRET_KEY,
-            )
-            async with session.post(
-                f"{BETATRANSFER_BASE_URL}/api/payment",
-                params=params,
-                data=request_body,
-            ) as response:
-                response_text = await response.text()
-                if response.status < 400:
-                    data = json.loads(response_text)
-                    used_sign_variant = variant_name
-                    break
-                last_error = f"{variant_name}: {response.status} {response_text}"
-                if '"message":"Error sign."' not in response_text and '"message": "Error sign."' not in response_text:
-                    raise RuntimeError(f"BetaTransfer error {response.status}: {response_text}")
-
-    if data is None:
-        raise RuntimeError(
-            "BetaTransfer sign failed for all variants. "
-            f"Last response: {last_error}. "
-            f"Payment system set: {'yes' if BETATRANSFER_PAYMENT_SYSTEM else 'no'}."
-        )
+        async with session.post(
+            f"{BETATRANSFER_BASE_URL}/api/payment",
+            params=params,
+            data=request_body,
+        ) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                raise RuntimeError(f"BetaTransfer error {response.status}: {response_text}")
+            data = json.loads(response_text)
 
     payment_url = data.get("url")
     provider_payment_id = str(data.get("id") or "").strip()
@@ -479,7 +389,6 @@ async def create_betatransfer_checkout(user_id: int, product_code: str, plan_cod
         "currency": BETATRANSFER_CURRENCY,
         "status": status,
         "locale": locale,
-        "sign_variant": used_sign_variant or "unknown",
     }
 
 
@@ -1584,7 +1493,6 @@ async def betatransfer_test(message: types.Message):
         f"Order ID: {payment['order_id']}\n"
         f"Payment ID: {payment['payment_id'] or '-'}\n"
         f"Locale: {payment['locale']}\n"
-        f"Sign variant: {payment['sign_variant']}\n"
         f"Callback URL: {BETATRANSFER_CALLBACK_URL}\n"
         f"Payment URL:\n{payment['payment_url']}"
     )
