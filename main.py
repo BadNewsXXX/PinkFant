@@ -155,6 +155,32 @@ BETATRANSFER_SIGN_FIELDS = [
 ]
 
 
+def build_betatransfer_request_body(user_id: int, product_code: str, plan_code: str, language: str) -> tuple[dict, str, str]:
+    plan = PRODUCTS[product_code]["plans"][plan_code]
+    locale = betatransfer_locale(language)
+    amount = betatransfer_amount(plan["price_usd"], BETATRANSFER_CURRENCY)
+    order_id = build_betatransfer_order_id(user_id, product_code, plan_code)
+    description = f"{product_name(product_code, 'en')} | {plan_name(product_code, plan_code, 'en')} | user {user_id}"
+
+    request_body = {
+        "orderId": order_id,
+        "amount": amount,
+        "currency": BETATRANSFER_CURRENCY,
+        "urlResult": BETATRANSFER_CALLBACK_URL,
+        "locale": locale,
+        "user_comment": description,
+        "fullCallback": BETATRANSFER_FULL_CALLBACK,
+    }
+    if BETATRANSFER_PAYMENT_SYSTEM:
+        request_body["paymentSystem"] = BETATRANSFER_PAYMENT_SYSTEM
+    if BETATRANSFER_SUCCESS_URL:
+        request_body["urlSuccess"] = BETATRANSFER_SUCCESS_URL
+    if BETATRANSFER_FAIL_URL:
+        request_body["urlFail"] = BETATRANSFER_FAIL_URL
+
+    return request_body, order_id, locale
+
+
 async def create_platega_checkout(user_id: int, product_code: str, plan_code: str) -> dict:
     if not PLATEGA_MERCHANT_ID or not PLATEGA_SECRET:
         raise RuntimeError("Platega credentials are not configured.")
@@ -315,26 +341,9 @@ async def create_betatransfer_checkout(user_id: int, product_code: str, plan_cod
     if plan.get("support_only"):
         raise ValueError("This plan is support-only and cannot be paid automatically.")
 
-    locale = betatransfer_locale(language)
-    amount = betatransfer_amount(plan["price_usd"], BETATRANSFER_CURRENCY)
-    order_id = build_betatransfer_order_id(user_id, product_code, plan_code)
-    description = f"{product_name(product_code, 'en')} | {plan_name(product_code, plan_code, 'en')} | user {user_id}"
-
-    request_body = {
-        "orderId": order_id,
-        "amount": amount,
-        "currency": BETATRANSFER_CURRENCY,
-        "urlResult": BETATRANSFER_CALLBACK_URL,
-        "locale": locale,
-        "user_comment": description,
-        "fullCallback": BETATRANSFER_FULL_CALLBACK,
-    }
-    if BETATRANSFER_PAYMENT_SYSTEM:
-        request_body["paymentSystem"] = BETATRANSFER_PAYMENT_SYSTEM
-    if BETATRANSFER_SUCCESS_URL:
-        request_body["urlSuccess"] = BETATRANSFER_SUCCESS_URL
-    if BETATRANSFER_FAIL_URL:
-        request_body["urlFail"] = BETATRANSFER_FAIL_URL
+    request_body, order_id, locale = build_betatransfer_request_body(user_id, product_code, plan_code, language)
+    amount = request_body["amount"]
+    description = request_body["user_comment"]
 
     request_body["sign"] = generate_betatransfer_signature(
         build_betatransfer_signature_params(request_body, BETATRANSFER_SIGN_FIELDS),
@@ -1531,6 +1540,87 @@ async def betatransfer_info(message: types.Message):
         f"Payment system: {info.get('paymentSystem', '-')}\n"
         f"Created: {info.get('createdAt', '-')}\n"
         f"Updated: {info.get('updatedAt', '-')}"
+    )
+
+
+@dp.message(Command("beta_debug"))
+async def betatransfer_debug(message: types.Message):
+    if message.from_user.id != ADMIN_USER_ID:
+        await message.reply("You are not authorized to use this command.")
+        return
+
+    args = message.text.split()
+    if len(args) < 3:
+        await message.reply(
+            "Usage:\n"
+            "/beta_debug 1 lifetime\n"
+            "/beta_debug 2 monthly\n"
+            "/beta_debug 2 quarterly\n"
+            "/beta_debug 3 yearly\n"
+            "/beta_debug 2 monthly <user_id>\n"
+            "/beta_debug 2 monthly <user_id> <locale>"
+        )
+        return
+
+    try:
+        product_choice = int(args[1])
+    except ValueError:
+        await message.reply("Invalid product choice.")
+        return
+
+    product_code = ADMIN_PRODUCT_CHOICES.get(product_choice)
+    if product_code is None:
+        await message.reply("Unknown product. Use 1 for Anxieest, 2 for CooMeet, 3 for Mandy Rose.")
+        return
+
+    plan_code = args[2].strip().lower()
+    plan = PRODUCTS.get(product_code, {}).get("plans", {}).get(plan_code)
+    if plan is None:
+        await message.reply(f"Unknown plan '{plan_code}' for {product_name(product_code, 'en')}.")
+        return
+
+    target_user_id = message.from_user.id
+    if len(args) >= 4:
+        try:
+            target_user_id = int(args[3])
+        except ValueError:
+            await message.reply("Invalid user_id.")
+            return
+
+    locale_language = "en"
+    if len(args) >= 5:
+        locale_language = args[4].strip().lower()
+
+    request_body, order_id, locale = build_betatransfer_request_body(
+        target_user_id,
+        product_code,
+        plan_code,
+        locale_language,
+    )
+    sign_params = build_betatransfer_signature_params(request_body, BETATRANSFER_SIGN_FIELDS)
+    sign_string_without_secret = "".join(sign_params)
+    sign_value = generate_betatransfer_signature(sign_params, BETATRANSFER_SECRET_KEY or "")
+
+    body_lines = [f"{key}={value}" for key, value in request_body.items()]
+    params_lines = [f"{index + 1}. {value}" for index, value in enumerate(sign_params)]
+
+    await message.reply(
+        "BetaTransfer debug:\n"
+        f"Product: {product_name(product_code, 'en')}\n"
+        f"Plan: {plan_name(product_code, plan_code, 'en')}\n"
+        f"User ID: {target_user_id}\n"
+        f"Order ID: {order_id}\n"
+        f"Locale: {locale}\n\n"
+        "Request body:\n"
+        f"<pre>{chr(10).join(body_lines)}</pre>\n"
+        "Sign fields:\n"
+        f"<pre>{chr(10).join(BETATRANSFER_SIGN_FIELDS)}</pre>\n"
+        "Sign params:\n"
+        f"<pre>{chr(10).join(params_lines)}</pre>\n"
+        "Sign string:\n"
+        f"<pre>{sign_string_without_secret}[SECRET]</pre>\n"
+        f"MD5 sign: <pre>{sign_value}</pre>",
+        parse_mode="HTML",
     )
 
 
