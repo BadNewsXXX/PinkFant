@@ -151,6 +151,7 @@ BETATRANSFER_SIGN_FIELDS = [
     "orderId",
     "amount",
     "currency",
+    "paymentSystem",
     "fullCallback",
 ]
 
