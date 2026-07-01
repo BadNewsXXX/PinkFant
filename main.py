@@ -152,6 +152,7 @@ BETATRANSFER_SIGN_FIELDS = [
     "amount",
     "currency",
     "paymentSystem",
+    "payerId",
     "fullCallback",
 ]
 
@@ -169,6 +170,7 @@ def build_betatransfer_request_body(user_id: int, product_code: str, plan_code: 
         "currency": BETATRANSFER_CURRENCY,
         "urlResult": BETATRANSFER_CALLBACK_URL,
         "locale": locale,
+        "payerId": str(user_id),
         "user_comment": description,
         "fullCallback": BETATRANSFER_FULL_CALLBACK,
     }
