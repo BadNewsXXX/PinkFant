@@ -61,6 +61,15 @@ PLATEGA_FAILED_URL = os.getenv("PLATEGA_FAILED_URL")
 PLATEGA_CALLBACK_URL = os.getenv("PLATEGA_CALLBACK_URL")
 PLATEGA_LISTEN_HOST = os.getenv("PLATEGA_LISTEN_HOST", "127.0.0.1")
 PLATEGA_LISTEN_PORT = int(os.getenv("PLATEGA_LISTEN_PORT", "8080"))
+BETATRANSFER_API_KEY = os.getenv("BETATRANSFER_API_KEY")
+BETATRANSFER_SECRET_KEY = os.getenv("BETATRANSFER_SECRET_KEY")
+BETATRANSFER_BASE_URL = os.getenv("BETATRANSFER_BASE_URL", "https://merchant.betatransfer.io")
+BETATRANSFER_CALLBACK_URL = os.getenv("BETATRANSFER_CALLBACK_URL")
+BETATRANSFER_SUCCESS_URL = os.getenv("BETATRANSFER_SUCCESS_URL")
+BETATRANSFER_FAIL_URL = os.getenv("BETATRANSFER_FAIL_URL")
+BETATRANSFER_CURRENCY = os.getenv("BETATRANSFER_CURRENCY", "USD").upper()
+BETATRANSFER_PAYMENT_SYSTEM = (os.getenv("BETATRANSFER_PAYMENT_SYSTEM") or "").strip()
+BETATRANSFER_FULL_CALLBACK = int(os.getenv("BETATRANSFER_FULL_CALLBACK", "1"))
 MENU_VARIANTS = {key: tuple(values.values()) for key, values in MENU_TEXT.items()}
 ADMIN_PRODUCT_CHOICES = {
     1: "anxieest",
@@ -91,6 +100,51 @@ def platega_amount_rub(price_usd: float | int) -> float:
 
 def build_platega_payload(user_id: int, product_code: str, plan_code: str) -> str:
     return f"platega:{user_id}:{product_code}:{plan_code}:{uuid.uuid4().hex[:12]}"
+
+
+def generate_betatransfer_signature(params: list[str], secret_key: str) -> str:
+    sign_string = "".join(params) + secret_key
+    return hashlib.md5(sign_string.encode("utf-8")).hexdigest()
+
+
+def build_betatransfer_signature_params(payload: dict, ordered_fields: list[str]) -> list[str]:
+    params: list[str] = []
+    for field in ordered_fields:
+        value = payload.get(field)
+        if value is None or value == "":
+            continue
+        params.append(str(value))
+    return params
+
+
+def betatransfer_locale(language: str) -> str:
+    return language if language in {"en", "ru", "uk"} else "en"
+
+
+def betatransfer_amount(price_usd: float | int, currency: str) -> str:
+    normalized_currency = currency.upper()
+    if normalized_currency == "RUB":
+        return f"{platega_amount_rub(price_usd):.2f}"
+    return f"{float(price_usd):.2f}"
+
+
+def build_betatransfer_order_id(user_id: int, product_code: str, plan_code: str) -> str:
+    product_map = {
+        "anxieest": "anx",
+        "coomeet": "coo",
+        "mandy_rose": "mdy",
+    }
+    plan_map = {
+        "lifetime": "life",
+        "monthly": "m1",
+        "quarterly": "m3",
+        "yearly": "y12",
+        "lifetime_request": "lreq",
+    }
+    product_part = product_map.get(product_code, "prd")
+    plan_part = plan_map.get(plan_code, "pln")
+    suffix = uuid.uuid4().hex[:8]
+    return f"bt-{user_id}-{product_part}-{plan_part}-{suffix}"[:40]
 
 
 async def create_platega_checkout(user_id: int, product_code: str, plan_code: str) -> dict:
@@ -241,6 +295,147 @@ async def create_platega_checkout_with_method(
         "payload": payload,
         "status": status,
     }
+
+
+async def create_betatransfer_checkout(user_id: int, product_code: str, plan_code: str, language: str) -> dict:
+    if not BETATRANSFER_API_KEY or not BETATRANSFER_SECRET_KEY:
+        raise RuntimeError("BetaTransfer credentials are not configured.")
+    if not BETATRANSFER_CALLBACK_URL:
+        raise RuntimeError("BetaTransfer callback URL is not configured.")
+
+    plan = PRODUCTS[product_code]["plans"][plan_code]
+    if plan.get("support_only"):
+        raise ValueError("This plan is support-only and cannot be paid automatically.")
+
+    locale = betatransfer_locale(language)
+    amount = betatransfer_amount(plan["price_usd"], BETATRANSFER_CURRENCY)
+    order_id = build_betatransfer_order_id(user_id, product_code, plan_code)
+    description = f"{product_name(product_code, 'en')} | {plan_name(product_code, plan_code, 'en')} | user {user_id}"
+
+    request_body = {
+        "orderId": order_id,
+        "amount": amount,
+        "currency": BETATRANSFER_CURRENCY,
+        "urlResult": BETATRANSFER_CALLBACK_URL,
+        "locale": locale,
+        "fullCallback": BETATRANSFER_FULL_CALLBACK,
+        "user_comment": description,
+    }
+    if BETATRANSFER_PAYMENT_SYSTEM:
+        request_body["paymentSystem"] = BETATRANSFER_PAYMENT_SYSTEM
+    if BETATRANSFER_SUCCESS_URL:
+        request_body["urlSuccess"] = BETATRANSFER_SUCCESS_URL
+    if BETATRANSFER_FAIL_URL:
+        request_body["urlFail"] = BETATRANSFER_FAIL_URL
+
+    sign_fields = [
+        "orderId",
+        "amount",
+        "currency",
+        "paymentSystem",
+        "urlResult",
+        "urlSuccess",
+        "urlFail",
+        "locale",
+        "redirect",
+        "payerId",
+        "payerPhone",
+        "payerName",
+        "payerEmail",
+        "payer_firstname",
+        "payer_lastname",
+        "payer_postcode",
+        "payer_address",
+        "payer_country",
+        "ip",
+        "user_comment",
+        "fullCallback",
+    ]
+    request_body["sign"] = generate_betatransfer_signature(
+        build_betatransfer_signature_params(request_body, sign_fields),
+        BETATRANSFER_SECRET_KEY,
+    )
+
+    params = {"token": BETATRANSFER_API_KEY}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{BETATRANSFER_BASE_URL}/api/payment",
+            params=params,
+            data=request_body,
+        ) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                raise RuntimeError(f"BetaTransfer error {response.status}: {response_text}")
+            data = json.loads(response_text)
+
+    payment_url = data.get("url")
+    provider_payment_id = str(data.get("id") or "").strip()
+    provider_hash = str(data.get("hash") or "").strip()
+    status = str(data.get("status") or "created")
+    if not payment_url:
+        raise RuntimeError(f"Unexpected BetaTransfer response: {data}")
+
+    await db.create_betatransfer_payment(
+        user_id=user_id,
+        product_code=product_code,
+        plan_code=plan_code,
+        amount=float(amount),
+        currency=BETATRANSFER_CURRENCY,
+        locale=locale,
+        description=description,
+        order_id=order_id,
+        status=status,
+        callback_url=BETATRANSFER_CALLBACK_URL,
+        success_url=BETATRANSFER_SUCCESS_URL,
+        fail_url=BETATRANSFER_FAIL_URL,
+        payment_system=BETATRANSFER_PAYMENT_SYSTEM or None,
+        payment_url=payment_url,
+        provider_payment_id=provider_payment_id or None,
+        provider_hash=provider_hash or None,
+        full_callback=BETATRANSFER_FULL_CALLBACK == 1,
+    )
+
+    return {
+        "order_id": order_id,
+        "payment_id": provider_payment_id,
+        "payment_hash": provider_hash,
+        "payment_url": payment_url,
+        "amount": amount,
+        "currency": BETATRANSFER_CURRENCY,
+        "status": status,
+        "locale": locale,
+    }
+
+
+async def get_betatransfer_payment_info(order_id: str | None = None, payment_id: str | None = None) -> dict:
+    if not BETATRANSFER_API_KEY or not BETATRANSFER_SECRET_KEY:
+        raise RuntimeError("BetaTransfer credentials are not configured.")
+    if not order_id and not payment_id:
+        raise ValueError("Either order_id or payment_id must be provided.")
+
+    request_body: dict[str, str] = {}
+    if order_id:
+        request_body["orderId"] = order_id
+    if payment_id:
+        request_body["id"] = str(payment_id)
+
+    sign_fields = ["id", "orderId"]
+    request_body["sign"] = generate_betatransfer_signature(
+        build_betatransfer_signature_params(request_body, sign_fields),
+        BETATRANSFER_SECRET_KEY,
+    )
+
+    params = {"token": BETATRANSFER_API_KEY}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{BETATRANSFER_BASE_URL}/api/info",
+            params=params,
+            data=request_body,
+        ) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                raise RuntimeError(f"BetaTransfer info error {response.status}: {response_text}")
+            return json.loads(response_text)
 
 
 def special_payment_flow(language: str, product_code: str, plan_code: str) -> bool:
@@ -1247,6 +1442,113 @@ async def platega_test(message: types.Message):
     )
 
 
+@dp.message(Command("beta_test"))
+async def betatransfer_test(message: types.Message):
+    if message.from_user.id != ADMIN_USER_ID:
+        await message.reply("You are not authorized to use this command.")
+        return
+
+    args = message.text.split()
+    if len(args) < 3:
+        await message.reply(
+            "Usage:\n"
+            "/beta_test 1 lifetime\n"
+            "/beta_test 2 monthly\n"
+            "/beta_test 2 quarterly\n"
+            "/beta_test 3 yearly\n"
+            "/beta_test 2 monthly <user_id>\n"
+            "/beta_test 2 monthly <user_id> <locale>"
+        )
+        return
+
+    try:
+        product_choice = int(args[1])
+    except ValueError:
+        await message.reply("Invalid product choice.")
+        return
+
+    product_code = ADMIN_PRODUCT_CHOICES.get(product_choice)
+    if product_code is None:
+        await message.reply("Unknown product. Use 1 for Anxieest, 2 for CooMeet, 3 for Mandy Rose.")
+        return
+
+    plan_code = args[2].strip().lower()
+    plan = PRODUCTS.get(product_code, {}).get("plans", {}).get(plan_code)
+    if plan is None:
+        await message.reply(f"Unknown plan '{plan_code}' for {product_name(product_code, 'en')}.")
+        return
+    if plan.get("support_only"):
+        await message.reply("This plan is support-only and cannot be used for automatic BetaTransfer testing.")
+        return
+
+    target_user_id = message.from_user.id
+    if len(args) >= 4:
+        try:
+            target_user_id = int(args[3])
+        except ValueError:
+            await message.reply("Invalid user_id.")
+            return
+
+    locale_language = "en"
+    if len(args) >= 5:
+        locale_language = args[4].strip().lower()
+
+    try:
+        payment = await create_betatransfer_checkout(target_user_id, product_code, plan_code, locale_language)
+    except Exception as e:
+        await message.reply(f"Failed to create BetaTransfer payment: {e}")
+        return
+
+    await message.reply(
+        "BetaTransfer test payment created.\n"
+        f"User ID: {target_user_id}\n"
+        f"Product: {product_name(product_code, 'en')}\n"
+        f"Plan: {plan_name(product_code, plan_code, 'en')}\n"
+        f"Amount: {payment['amount']} {payment['currency']}\n"
+        f"Order ID: {payment['order_id']}\n"
+        f"Payment ID: {payment['payment_id'] or '-'}\n"
+        f"Locale: {payment['locale']}\n"
+        f"Callback URL: {BETATRANSFER_CALLBACK_URL}\n"
+        f"Payment URL:\n{payment['payment_url']}"
+    )
+
+
+@dp.message(Command("beta_info"))
+async def betatransfer_info(message: types.Message):
+    if message.from_user.id != ADMIN_USER_ID:
+        await message.reply("You are not authorized to use this command.")
+        return
+
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        await message.reply("Usage:\n/beta_info <order_id>")
+        return
+
+    order_id = args[1].strip()
+    if not order_id:
+        await message.reply("Order ID cannot be empty.")
+        return
+
+    try:
+        info = await get_betatransfer_payment_info(order_id=order_id)
+    except Exception as e:
+        await message.reply(f"Failed to fetch BetaTransfer payment info: {e}")
+        return
+
+    await message.reply(
+        "BetaTransfer payment info:\n"
+        f"Order ID: {info.get('orderId', '-')}\n"
+        f"Payment ID: {info.get('id', '-')}\n"
+        f"Status: {info.get('status', '-')}\n"
+        f"Amount: {info.get('amount', '-')}\n"
+        f"Paid amount: {info.get('paidAmount', '-')}\n"
+        f"Currency: {info.get('currency', '-')}\n"
+        f"Payment system: {info.get('paymentSystem', '-')}\n"
+        f"Created: {info.get('createdAt', '-')}\n"
+        f"Updated: {info.get('updatedAt', '-')}"
+    )
+
+
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await db.add_user(message.from_user.id)
@@ -1663,6 +1965,40 @@ async def platega_healthcheck(_: web.Request) -> web.Response:
     )
 
 
+async def betatransfer_healthcheck(_: web.Request) -> web.Response:
+    return web.json_response(
+        {
+            "ok": True,
+            "service": "betatransfer-callback",
+            "callback_url": BETATRANSFER_CALLBACK_URL,
+        }
+    )
+
+
+async def parse_callback_payload(request: web.Request) -> dict:
+    content_type = (request.content_type or "").lower()
+    if "application/json" in content_type:
+        payload = await request.json()
+        return dict(payload)
+
+    post_data = await request.post()
+    return {key: value for key, value in post_data.items()}
+
+
+def verify_betatransfer_callback_signature(payload: dict) -> bool:
+    if not BETATRANSFER_SECRET_KEY:
+        return False
+
+    provided_signature = str(payload.get("sign") or payload.get("signature") or "").strip().lower()
+    amount = payload.get("amount")
+    order_id = payload.get("orderId")
+    if not provided_signature or amount is None or not order_id:
+        return False
+
+    expected_signature = hashlib.md5(f"{amount}{order_id}{BETATRANSFER_SECRET_KEY}".encode("utf-8")).hexdigest()
+    return provided_signature == expected_signature
+
+
 async def platega_callback(request: web.Request) -> web.Response:
     try:
         payload = await request.json()
@@ -1715,8 +2051,72 @@ async def platega_callback(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "message": "payment confirmed and access granted"})
 
 
+async def betatransfer_callback(request: web.Request) -> web.Response:
+    try:
+        payload = await parse_callback_payload(request)
+    except Exception:
+        return web.json_response({"ok": False, "error": "invalid_callback_payload"}, status=400)
+
+    order_id = str(payload.get("orderId") or "").strip()
+    status = str(payload.get("status") or "").lower()
+
+    if not order_id:
+        return web.json_response({"ok": False, "error": "missing_order_id"}, status=400)
+
+    payment = await db.get_betatransfer_payment_by_order_id(order_id)
+    if payment is None:
+        return web.json_response({"ok": False, "error": "unknown_order"}, status=404)
+
+    if not verify_betatransfer_callback_signature(payload):
+        logging.warning("BetaTransfer callback signature mismatch for order %s", order_id)
+        return web.json_response({"ok": False, "error": "invalid_signature"}, status=400)
+
+    provider_payment_id = str(payload.get("id") or "").strip() or None
+    provider_hash = str(payload.get("hash") or "").strip() or None
+
+    await db.update_betatransfer_payment_status(
+        order_id=order_id,
+        status=status or payment.status,
+        callback_payload=payload,
+        callback_status=status or None,
+        callback_processed=payment.callback_processed,
+        provider_payment_id=provider_payment_id,
+        provider_hash=provider_hash,
+        payment_url=str(payload.get("url") or "").strip() or None,
+    )
+
+    refreshed_payment = await db.get_betatransfer_payment_by_order_id(order_id)
+    if refreshed_payment is None:
+        return web.json_response({"ok": False, "error": "payment_disappeared"}, status=500)
+
+    if status != "success":
+        return web.json_response({"ok": True, "message": f"status {status or 'unknown'} recorded"})
+
+    if refreshed_payment.callback_processed or refreshed_payment.activated_at is not None:
+        return web.json_response({"ok": True, "message": "duplicate callback ignored"})
+
+    try:
+        result = await db.activate_subscription(
+            refreshed_payment.user_id,
+            refreshed_payment.product_code,
+            refreshed_payment.plan_code,
+        )
+        await db.mark_betatransfer_payment_activated(order_id)
+        try:
+            await send_platega_access_result_to_user(refreshed_payment.user_id, result)
+        except Exception:
+            logging.exception("BetaTransfer payment succeeded, but failed to notify user.")
+    except Exception:
+        logging.exception("Failed to activate BetaTransfer payment for order %s", order_id)
+        return web.json_response({"ok": False, "error": "activation_failed"}, status=500)
+
+    return web.json_response({"ok": True, "message": "payment confirmed and access granted"})
+
+
 async def run_platega_http_server():
     app = web.Application()
+    app.router.add_get("/api/betatransfer/health", betatransfer_healthcheck)
+    app.router.add_post("/api/betatransfer/callback", betatransfer_callback)
     app.router.add_get("/api/platega/health", platega_healthcheck)
     app.router.add_post("/api/platega/callback", platega_callback)
 
@@ -1724,7 +2124,7 @@ async def run_platega_http_server():
     await runner.setup()
     site = web.TCPSite(runner, PLATEGA_LISTEN_HOST, PLATEGA_LISTEN_PORT)
     await site.start()
-    logging.info("Platega callback server started on http://%s:%s", PLATEGA_LISTEN_HOST, PLATEGA_LISTEN_PORT)
+    logging.info("Callback server started on http://%s:%s", PLATEGA_LISTEN_HOST, PLATEGA_LISTEN_PORT)
 
     await asyncio.Event().wait()
 

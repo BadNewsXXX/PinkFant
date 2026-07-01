@@ -124,6 +124,36 @@ class PlategaPayment(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
+class BetaTransferPayment(Base):
+    __tablename__ = "betatransfer_payments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    product_code = Column(String(50), nullable=False)
+    plan_code = Column(String(50), nullable=False)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), nullable=False, server_default="USD")
+    locale = Column(String(5), nullable=False, server_default="en")
+    payment_system = Column(String(50), nullable=True)
+    description = Column(String(255), nullable=False)
+    order_id = Column(String(64), nullable=False, unique=True)
+    provider_payment_id = Column(String(255), nullable=True, unique=True)
+    provider_hash = Column(String(255), nullable=True)
+    payment_url = Column(String(2048), nullable=True)
+    status = Column(String(50), nullable=False, server_default="pending")
+    success_url = Column(String(2048), nullable=True)
+    fail_url = Column(String(2048), nullable=True)
+    callback_url = Column(String(2048), nullable=True)
+    full_callback = Column(Boolean, nullable=False, server_default="true")
+    callback_status = Column(String(50), nullable=True)
+    callback_processed = Column(Boolean, nullable=False, server_default="false")
+    callback_received_at = Column(DateTime(timezone=True), nullable=True)
+    activated_at = Column(DateTime(timezone=True), nullable=True)
+    raw_callback = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -160,6 +190,15 @@ async def init_db():
             text("CREATE UNIQUE INDEX IF NOT EXISTS ix_platega_payments_transaction_id ON platega_payments (transaction_id)")
         )
         await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_platega_payments_payload ON platega_payments (payload)"))
+        await conn.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_betatransfer_payments_order_id ON betatransfer_payments (order_id)")
+        )
+        await conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_betatransfer_payments_provider_payment_id "
+                "ON betatransfer_payments (provider_payment_id)"
+            )
+        )
 
 
 async def scheduler():
@@ -605,6 +644,129 @@ async def mark_platega_payment_activated(transaction_id: str):
             select(PlategaPayment)
             .where(PlategaPayment.transaction_id == transaction_id)
             .order_by(PlategaPayment.id.desc())
+        )
+        if payment is None:
+            return None
+
+        payment.activated_at = datetime.now(timezone.utc)
+        payment.callback_processed = True
+        payment.updated_at = datetime.now(timezone.utc)
+        await session.commit()
+        await session.refresh(payment)
+        return payment
+
+
+async def create_betatransfer_payment(
+    user_id: int,
+    product_code: str,
+    plan_code: str,
+    amount: float,
+    currency: str,
+    locale: str,
+    description: str,
+    order_id: str,
+    status: str,
+    callback_url: str | None = None,
+    success_url: str | None = None,
+    fail_url: str | None = None,
+    payment_system: str | None = None,
+    payment_url: str | None = None,
+    provider_payment_id: str | None = None,
+    provider_hash: str | None = None,
+    full_callback: bool = True,
+):
+    async with async_session() as session:
+        payment = BetaTransferPayment(
+            user_id=user_id,
+            product_code=product_code,
+            plan_code=plan_code,
+            amount=amount,
+            currency=currency,
+            locale=locale,
+            payment_system=payment_system,
+            description=description,
+            order_id=order_id,
+            provider_payment_id=provider_payment_id,
+            provider_hash=provider_hash,
+            payment_url=payment_url,
+            status=status,
+            callback_url=callback_url,
+            success_url=success_url,
+            fail_url=fail_url,
+            full_callback=full_callback,
+            updated_at=datetime.now(timezone.utc),
+        )
+        session.add(payment)
+        await session.commit()
+        await session.refresh(payment)
+        return payment
+
+
+async def get_betatransfer_payment_by_order_id(order_id: str):
+    async with async_session() as session:
+        return await session.scalar(
+            select(BetaTransferPayment)
+            .where(BetaTransferPayment.order_id == order_id)
+            .order_by(BetaTransferPayment.id.desc())
+        )
+
+
+async def get_betatransfer_payment_by_provider_payment_id(provider_payment_id: str):
+    async with async_session() as session:
+        return await session.scalar(
+            select(BetaTransferPayment)
+            .where(BetaTransferPayment.provider_payment_id == provider_payment_id)
+            .order_by(BetaTransferPayment.id.desc())
+        )
+
+
+async def update_betatransfer_payment_status(
+    order_id: str,
+    status: str,
+    callback_payload: dict | None = None,
+    callback_status: str | None = None,
+    callback_processed: bool | None = None,
+    provider_payment_id: str | None = None,
+    provider_hash: str | None = None,
+    payment_url: str | None = None,
+):
+    async with async_session() as session:
+        payment = await session.scalar(
+            select(BetaTransferPayment)
+            .where(BetaTransferPayment.order_id == order_id)
+            .order_by(BetaTransferPayment.id.desc())
+        )
+        if payment is None:
+            return None
+
+        payment.status = status
+        payment.updated_at = datetime.now(timezone.utc)
+
+        if callback_status is not None:
+            payment.callback_status = callback_status
+        if callback_processed is not None:
+            payment.callback_processed = callback_processed
+        if provider_payment_id is not None:
+            payment.provider_payment_id = provider_payment_id
+        if provider_hash is not None:
+            payment.provider_hash = provider_hash
+        if payment_url is not None:
+            payment.payment_url = payment_url
+        if callback_payload is not None:
+            payment.raw_callback = json.dumps(callback_payload, ensure_ascii=False)
+            payment.callback_received_at = datetime.now(timezone.utc)
+
+        await session.commit()
+        await session.refresh(payment)
+        return payment
+
+
+async def mark_betatransfer_payment_activated(order_id: str):
+    async with async_session() as session:
+        payment = await session.scalar(
+            select(BetaTransferPayment)
+            .where(BetaTransferPayment.order_id == order_id)
+            .order_by(BetaTransferPayment.id.desc())
         )
         if payment is None:
             return None

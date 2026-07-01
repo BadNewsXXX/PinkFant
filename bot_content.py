@@ -626,7 +626,7 @@ UI_TEXT = {
         "ru": "Привет. Выберите, что хотите открыть ниже.",
     },
     "products_welcome": {
-        "en": "Welcome to PinkLeak ✨\n\nA private collection of exclusive content 😈\nTo explore the content, please choose an option below.",
+        "en": "Welcome to PinkLeak ✨\n\nA private collection of exclusive content 😈\nChoose an option below to get started.",
         "ru": "Добро пожаловать в PinkLeak ✨\n\nКоллекция эксклюзивного контента ждёт тебя 😈\nДля ознакомления с нашим контентом, выберите вариант ниже из списка.",
     },
     "menu_ready": {
