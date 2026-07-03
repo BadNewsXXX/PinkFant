@@ -1975,27 +1975,6 @@ async def special_payment_selected(callback: CallbackQuery):
         return
 
     method_code = rest[0]
-    if method_code == "betacrypto":
-        try:
-            payment = await create_betatransfer_checkout(user_id, product_code, plan_code, language)
-        except Exception as e:
-            await callback.message.edit_text(
-                (
-                    f"Не удалось создать платёж: {e}"
-                    if language == "ru"
-                    else f"Failed to create payment: {e}"
-                ),
-                reply_markup=kb.simple_back(language, f"specialpay:crypto:{product_code}:{plan_code}"),
-            )
-            return
-
-        await callback.message.edit_text(
-            build_platega_payment_text(language, product_code, plan_code, "crypto"),
-            parse_mode="HTML",
-            reply_markup=kb.payment_link(language, payment["payment_url"], f"specialpay:crypto:{product_code}:{plan_code}"),
-        )
-        return
-
     if method_code == "card":
         if not betatransfer_card_supported(product_code, plan_code):
             await callback.message.edit_text(

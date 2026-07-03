@@ -299,29 +299,6 @@ def anxieest_ru_crypto_methods(product_code: str, plan_code: str) -> InlineKeybo
     )
 
 
-def anxieest_ru_crypto_methods(product_code: str, plan_code: str) -> InlineKeyboardMarkup:
-    amount = price_text("ru", PRODUCTS[product_code]["plans"][plan_code]["price_usd"])
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text=f"✅ Оплатить {amount}",
-                    callback_data=f"specialpay:checkout:{product_code}:{plan_code}:crypto",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text="🧪 Тест BetaTransfer Crypto",
-                    callback_data=f"specialpay:checkout:{product_code}:{plan_code}:betacrypto",
-                )
-            ],
-            [InlineKeyboardButton(text="💰 CryptoPay", callback_data=f"specialpay:cryptopay:{product_code}:{plan_code}")],
-            [InlineKeyboardButton(text="✉️ Оплатить напрямую", callback_data=f"specialpay:direct:{product_code}:{plan_code}")],
-            [InlineKeyboardButton(text="Назад", callback_data=f"specialpay:other:{product_code}:{plan_code}")],
-        ]
-    )
-
-
 def payment_link(language: str, payment_url: str, back_callback: str) -> InlineKeyboardMarkup:
     open_label = "Открыть оплату" if language == "ru" else "Open payment"
     back_label = "Назад" if language == "ru" else "Back"
