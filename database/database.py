@@ -825,10 +825,15 @@ async def extend_subscription_months(user_id: int, months: int, product_code: st
         await session.commit()
 
 
-async def admin_grant_access(user_id: int, product_code: str, months: int | None = None):
+async def admin_grant_access(
+    user_id: int,
+    product_code: str,
+    months: int | None = None,
+    force_lifetime: bool = False,
+):
     now = datetime.now(timezone.utc)
     channel_id = PRODUCT_CHANNELS.get(product_code)
-    is_lifetime = product_code == "anxieest"
+    is_lifetime = product_code == "anxieest" or force_lifetime
     already_in_channel = await is_user_in_channel(user_id, channel_id)
 
     async with async_session() as session:

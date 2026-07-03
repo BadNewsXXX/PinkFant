@@ -839,7 +839,7 @@ def product_name(product_code: str, language: str) -> str:
 def plan_name(product_code: str, plan_code: str, language: str) -> str:
     if language == "ru" and product_code in {"coomeet", "mandy_rose"}:
         overrides = {
-            "quarterly": "Премиум на 3 месяца (выгодно)💎",
+            "quarterly": "Премиум на 3 месяца 🔥 (Популярно)",
             "monthly": "Премиум на 1 месяц",
             "yearly": "Премиум на 12 месяцев",
             "lifetime_request": "Навсегда 👑",

@@ -1405,7 +1405,9 @@ async def add_subscription(message: types.Message):
             "Usage:\n"
             "/as <user_id> 1\n"
             "/as <user_id> 2 <months>\n"
-            "/as <user_id> 3 <months>"
+            "/as <user_id> 3 <months>\n"
+            "/as <user_id> 2 lt\n"
+            "/as <user_id> 3 lt"
         )
         return
 
@@ -1422,17 +1424,22 @@ async def add_subscription(message: types.Message):
         return
 
     months = None
+    force_lifetime = False
     if product_code != "anxieest":
         if len(args) < 4:
             await message.reply("Please provide the number of months for this product.")
             return
-        try:
-            months = int(args[3])
-            if months <= 0:
-                raise ValueError
-        except ValueError:
-            await message.reply("Invalid number of months.")
-            return
+        plan_value = args[3].strip().lower()
+        if plan_value in {"lt", "life", "lifetime"}:
+            force_lifetime = True
+        else:
+            try:
+                months = int(plan_value)
+                if months <= 0:
+                    raise ValueError
+            except ValueError:
+                await message.reply("Invalid number of months. Use a positive number or 'lt'.")
+                return
     else:
         if len(args) >= 4:
             try:
@@ -1445,7 +1452,7 @@ async def add_subscription(message: types.Message):
                 return
 
     try:
-        result = await db.admin_grant_access(user_id, product_code, months)
+        result = await db.admin_grant_access(user_id, product_code, months, force_lifetime=force_lifetime)
     except Exception as e:
         await message.reply(f"Failed to add user {user_id}: {e}")
         return
