@@ -96,11 +96,11 @@ PRODUCTS = {
             "lifetime": {
                 "button": {
                     "en": "Lifetime access 💎",
-                    "ru": "Пожизненный доступ 💎",
+                    "ru": "Навсегда 👑",
                 },
                 "title": {
                     "en": "Lifetime access 💎",
-                    "ru": "Пожизненный доступ 💎",
+                    "ru": "Навсегда 👑",
                 },
                 "duration_days": None,
                 "is_lifetime": True,
@@ -293,18 +293,18 @@ PRODUCTS = {
             },
             "lifetime_request": {
                 "button": {
-                    "en": "Lifetime access 💎",
-                    "ru": "Пожизненный доступ 💎",
+                    "en": "Lifetime access 👑",
+                    "ru": "Навсегда 👑",
                 },
                 "title": {
-                    "en": "Lifetime access",
-                    "ru": "Пожизненный доступ",
+                    "en": "Lifetime access 👑",
+                    "ru": "Навсегда 👑",
                 },
                 "duration_days": None,
                 "is_lifetime": False,
                 "support_only": True,
                 "custom_text": {
-                    "en": "💎 Lifetime access is available upon request.\nContact support for more details.",
+                    "en": "👑 Lifetime access is available upon request.\nContact support for more details.",
                     "ru": "👑 Пожизненный доступ доступен в индивидуальном формате.\nСвяжитесь с поддержкой, чтобы узнать подробности и условия получения доступа.",
                 },
             },
@@ -436,11 +436,11 @@ PRODUCTS = {
             "lifetime_request": {
                 "button": {
                     "en": "Lifetime access 💎",
-                    "ru": "Пожизненный доступ 💎",
+                    "ru": "Навсегда 👑",
                 },
                 "title": {
                     "en": "Lifetime access",
-                    "ru": "Пожизненный доступ",
+                    "ru": "Навсегда 👑",
                 },
                 "duration_days": None,
                 "is_lifetime": False,
@@ -842,7 +842,7 @@ def plan_name(product_code: str, plan_code: str, language: str) -> str:
             "quarterly": "Премиум на 3 месяца (выгодно)💎",
             "monthly": "Премиум на 1 месяц",
             "yearly": "Премиум на 12 месяцев",
-            "lifetime_request": "Пожизненный доступ 👑",
+            "lifetime_request": "Навсегда 👑",
         }
         if plan_code in overrides:
             return overrides[plan_code]

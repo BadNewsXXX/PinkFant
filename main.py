@@ -442,6 +442,27 @@ def special_payment_flow(language: str, product_code: str, plan_code: str) -> bo
     return False
 
 
+def betatransfer_card_supported(product_code: str, plan_code: str) -> bool:
+    supported_pairs = {
+        ("coomeet", "quarterly"),
+        ("coomeet", "yearly"),
+        ("mandy_rose", "yearly"),
+    }
+    return (product_code, plan_code) in supported_pairs
+
+
+def build_card_unavailable_text(language: str) -> str:
+    if language == "ru":
+        return (
+            "К сожалению, на данный момент оплата картой для этого тарифа недоступна.\n\n"
+            "Пожалуйста, выберите другой способ оплаты или обратитесь в поддержку."
+        )
+    return (
+        "Unfortunately, card payment is currently unavailable for this plan.\n\n"
+        "Please choose another payment method or contact support."
+    )
+
+
 def special_payment_method_label(method_code: str, language: str) -> str:
     labels = {
         "sbp": {"en": "QR / SBP", "ru": "QR / СБП"},
@@ -1794,6 +1815,31 @@ async def special_payment_selected(callback: CallbackQuery):
 
     method_code = rest[0]
     if method_code == "card":
+        if not betatransfer_card_supported(product_code, plan_code):
+            await callback.message.edit_text(
+                build_card_unavailable_text(language),
+                reply_markup=kb.simple_back(language, f"specialpay:other:{product_code}:{plan_code}"),
+            )
+            return
+
+        try:
+            payment = await create_betatransfer_checkout(user_id, product_code, plan_code, language)
+        except Exception as e:
+            await callback.message.edit_text(
+                (
+                    f"Не удалось создать платёж: {e}"
+                    if language == "ru"
+                    else f"Failed to create payment: {e}"
+                ),
+                reply_markup=kb.simple_back(language, f"specialpay:other:{product_code}:{plan_code}"),
+            )
+            return
+
+        await callback.message.edit_text(
+            build_platega_payment_text(language, product_code, plan_code, method_code),
+            parse_mode="HTML",
+            reply_markup=kb.payment_link(language, payment["payment_url"], f"specialpay:other:{product_code}:{plan_code}"),
+        )
         return
 
     method_settings = {

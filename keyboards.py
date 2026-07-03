@@ -92,10 +92,19 @@ def product_plans(language: str, product_code: str) -> InlineKeyboardMarkup:
     if language == "ru" and product_code in {"coomeet", "mandy_rose"}:
         custom_order = ["quarterly", "monthly", "yearly", "lifetime_request"]
         custom_labels = {
-            "quarterly": "Премиум на 3 месяца (выгодно)💎",
+            "quarterly": "Премиум на 3 месяца 🔥 (Популярно)",
             "monthly": "Премиум на 1 месяц",
             "yearly": "Премиум на 12 месяцев",
-            "lifetime_request": "Пожизненный доступ 👑",
+            "lifetime_request": "Навсегда 👑",
+        }
+
+    if language == "en" and product_code in {"coomeet", "mandy_rose"}:
+        custom_order = ["quarterly", "monthly", "yearly", "lifetime_request"]
+        custom_labels = {
+            "quarterly": "Premium access for 3 months 🔥 (Most Popular)",
+            "monthly": "Premium access for 1 month",
+            "yearly": "Premium access for 12 months",
+            "lifetime_request": "Lifetime access 👑",
         }
 
     rows = [
