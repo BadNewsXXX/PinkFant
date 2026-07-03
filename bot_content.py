@@ -105,7 +105,7 @@ PRODUCTS = {
                 "duration_days": None,
                 "is_lifetime": True,
                 "price_usd": 10,
-                "stars_amount": 500,
+                "stars_amount": 650,
                 "custom_text": {
                     "en": (
                         "In private channel : \n"
@@ -159,7 +159,7 @@ PRODUCTS = {
                 "duration_days": 30,
                 "is_lifetime": False,
                 "price_usd": 6,
-                "stars_amount": 300,
+                "stars_amount": 390,
                 "custom_text": {
                     "en": (
                         "Inside the private channel you’ll get:\n"
@@ -211,7 +211,7 @@ PRODUCTS = {
                 "duration_days": 90,
                 "is_lifetime": False,
                 "price_usd": 14,
-                "stars_amount": 700,
+                "stars_amount": 890,
                 "custom_text": {
                     "en": (
                         "Inside the private channel you’ll get:\n"
@@ -263,7 +263,7 @@ PRODUCTS = {
                 "duration_days": 360,
                 "is_lifetime": False,
                 "price_usd": 49,
-                "stars_amount": 2450,
+                "stars_amount": 3190,
                 "custom_text": {
                     "en": (
                         "Inside the private channel you’ll get:\n"
@@ -336,7 +336,7 @@ PRODUCTS = {
                 "duration_days": 30,
                 "is_lifetime": False,
                 "price_usd": 5,
-                "stars_amount": 250,
+                "stars_amount": 350,
                 "custom_text": {
                     "en": (
                         "Inside the private channel you’ll get:\n"
@@ -371,7 +371,7 @@ PRODUCTS = {
                 "duration_days": 90,
                 "is_lifetime": False,
                 "price_usd": 12,
-                "stars_amount": 600,
+                "stars_amount": 790,
                 "custom_text": {
                     "en": (
                         "Inside the private channel you’ll get:\n"
@@ -406,7 +406,7 @@ PRODUCTS = {
                 "duration_days": 360,
                 "is_lifetime": False,
                 "price_usd": 39,
-                "stars_amount": 1950,
+                "stars_amount": 2490,
                 "custom_text": {
                     "en": (
                         "Inside the private channel you’ll get:\n"
