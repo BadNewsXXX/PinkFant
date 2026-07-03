@@ -572,6 +572,102 @@ def build_donation_alerts_text(language: str, product_code: str, plan_code: str,
     )
 
 
+# Clean UTF-8 overrides for payment text helpers above. Earlier versions in this file
+# contain mojibake; Python will use these later definitions at runtime.
+def build_card_unavailable_text(language: str) -> str:
+    if language == "ru":
+        return (
+            "К сожалению, на данный момент оплата картой для этого тарифа недоступна.\n\n"
+            "Пожалуйста, выберите другой способ оплаты или обратитесь в поддержку."
+        )
+    return (
+        "Unfortunately, card payment is currently unavailable for this plan.\n\n"
+        "Please choose another payment method or contact support."
+    )
+
+
+def special_payment_method_label(method_code: str, language: str) -> str:
+    labels = {
+        "default": {"en": "QR / SBP / Crypto", "ru": "QR / СБП / Криптовалюта"},
+        "sbp": {"en": "QR / SBP", "ru": "QR / СБП"},
+        "card": {"en": "Card", "ru": "Карта"},
+        "crypto": {"en": "Cryptocurrency", "ru": "Криптовалюта"},
+    }
+    return labels[method_code][language]
+
+
+def build_platega_payment_text(language: str, product_code: str, plan_code: str, method_code: str) -> str:
+    method = special_payment_method_label(method_code, language)
+    if language == "ru":
+        return (
+            f"<b>Способ оплаты:</b> {method}\n"
+            f"<b>Продукт:</b> {product_name(product_code, language)}\n"
+            f"<b>Тариф:</b> {plan_name(product_code, plan_code, language)}\n"
+            f"<b>Сумма:</b> {price_text(language, PRODUCTS[product_code]['plans'][plan_code]['price_usd'])}\n\n"
+            "Нажмите кнопку ниже, чтобы открыть страницу оплаты."
+        )
+    return (
+        f"<b>Payment method:</b> {method}\n"
+        f"<b>Product:</b> {product_name(product_code, language)}\n"
+        f"<b>Plan:</b> {plan_name(product_code, plan_code, language)}\n"
+        f"<b>Amount:</b> {price_text(language, PRODUCTS[product_code]['plans'][plan_code]['price_usd'])}\n\n"
+        "Use the button below to open the payment page."
+    )
+
+
+def build_manual_payment_text(language: str, product_code: str, plan_code: str, user_id: int) -> str:
+    plan = PRODUCTS[product_code]["plans"][plan_code]
+    display_price = price_text(language, plan["price_usd"])
+    if language == "en":
+        return (
+            f"<b>Payment method:</b> Via Telegram\n"
+            f"<b>Product:</b> {product_name(product_code, language)}\n"
+            f"<b>Plan:</b> {plan_name(product_code, plan_code, language)}\n"
+            f"<b>Cost:</b> {display_price}\n"
+            f"<b>Your ID:</b> {user_id}\n\n"
+            f"Contact me here to complete the payment manually:\n{SUPPORT_URL}"
+        )
+    return (
+        f"<b>Способ оплаты:</b> Через Telegram\n"
+        f"<b>Продукт:</b> {product_name(product_code, language)}\n"
+        f"<b>Тариф:</b> {plan_name(product_code, plan_code, language)}\n"
+        f"<b>Стоимость:</b> {display_price}\n"
+        f"<b>Ваш ID:</b> {user_id}\n\n"
+        f"Напишите мне сюда, чтобы завершить оплату вручную:\n{SUPPORT_URL}"
+    )
+
+
+def build_donation_alerts_text(language: str, product_code: str, plan_code: str, user_id: int) -> str:
+    plan = PRODUCTS[product_code]["plans"][plan_code]
+    display_price = price_text(language, plan["price_usd"])
+    donation_alerts_url = "https://www.donationalerts.com/r/wweuniverse69"
+    if language == "en":
+        return (
+            f"<b>💳 Payment method:</b> Donation Alerts\n"
+            f"<b>🔞 Product:</b> {product_name(product_code, language)}\n"
+            f"<b>💎 Plan:</b> {plan_name(product_code, plan_code, language)}\n"
+            f"<b>💰 Cost:</b> {display_price}\n"
+            f"<b>Your ID:</b> {user_id}\n\n"
+            f"1. Open the link below:\n{donation_alerts_url}\n\n"
+            "2. Send the exact amount shown above.\n"
+            "3. Put your Telegram ID into the message field.\n"
+            "4. After payment, wait for transaction approval ✅\n\n"
+            "If you have questions, contact support : https://t.me/PinkLeakSupport"
+        )
+    return (
+        f"<b>Способ оплаты:</b> Donation Alerts\n"
+        f"<b>Продукт:</b> {product_name(product_code, language)}\n"
+        f"<b>Тариф:</b> {plan_name(product_code, plan_code, language)}\n"
+        f"<b>Стоимость:</b> {display_price}\n"
+        f"<b>Ваш ID:</b> {user_id}\n\n"
+        f"1. Откройте ссылку ниже:\n{donation_alerts_url}\n\n"
+        "2. Отправьте точную сумму, указанную выше.\n"
+        "3. В поле сообщения укажите ваш Telegram ID.\n"
+        "4. После оплаты дождитесь окончания транзакции ✅\n\n"
+        "Если у Вас остались вопросы, напишите в поддержку : https://t.me/PinkLeakSupport"
+    )
+
+
 async def create_signature(timestamp, method, request_path, body=""):
     if body == "{}" or body is None:
         body = ""
@@ -1176,6 +1272,64 @@ async def send_access_result_to_user(user_id: int, result: dict):
                 if language == "en"
                 else f"Р’Р°С€ РґРѕСЃС‚СѓРї Рє {product_label} Р°РєС‚РёРІРёСЂРѕРІР°РЅ РґРѕ {end_date}.\n"
                 f"Р•СЃР»Рё СЃСЃС‹Р»РєР°-РїСЂРёРіР»Р°С€РµРЅРёРµ РЅРµ Р±С‹Р»Р° СЃРіРµРЅРµСЂРёСЂРѕРІР°РЅР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё, РЅР°РїРёС€РёС‚Рµ РІ РїРѕРґРґРµСЂР¶РєСѓ СЃСЋРґР°:\n{SUPPORT_URL}"
+            )
+
+    await bot.send_message(user_id, text, parse_mode="HTML")
+
+
+async def send_access_result_to_user(user_id: int, result: dict):
+    language = await get_user_language(user_id)
+    product_label = product_name(result["product_code"], language)
+    is_extension = result.get("is_extension", False)
+
+    if is_extension:
+        if result["is_lifetime"]:
+            text = (
+                f"Your {product_label} access is already active for life."
+                if language == "en"
+                else f"Ваш доступ к {product_label} уже активен навсегда."
+            )
+        else:
+            end_date = result["subscription_end"].strftime("%Y-%m-%d")
+            text = (
+                f"Your {product_label} subscription has been extended. Active until {end_date}."
+                if language == "en"
+                else f"Ваша подписка на {product_label} была продлена. Активна до {end_date}."
+            )
+        await bot.send_message(user_id, text, parse_mode="HTML")
+        return
+
+    if result["invite_link"]:
+        if result["is_lifetime"]:
+            text = (
+                f"Your {product_label} access is active for life.\nHere is your invite link:\n{result['invite_link']}"
+                if language == "en"
+                else f"Ваш доступ к {product_label} активирован навсегда.\nВот ваша ссылка-приглашение:\n{result['invite_link']}"
+            )
+        else:
+            end_date = result["subscription_end"].strftime("%Y-%m-%d")
+            text = (
+                f"Your {product_label} access is active until {end_date}.\nHere is your invite link:\n{result['invite_link']}"
+                if language == "en"
+                else f"Ваш доступ к {product_label} активирован до {end_date}.\nВот ваша ссылка-приглашение:\n{result['invite_link']}"
+            )
+    else:
+        if result["is_lifetime"]:
+            text = (
+                f"Your {product_label} access is active for life.\n"
+                f"If the invite link was not generated automatically, contact support here:\n{SUPPORT_URL}"
+                if language == "en"
+                else f"Ваш доступ к {product_label} активирован навсегда.\n"
+                f"Если ссылка-приглашение не была сгенерирована автоматически, напишите в поддержку сюда:\n{SUPPORT_URL}"
+            )
+        else:
+            end_date = result["subscription_end"].strftime("%Y-%m-%d")
+            text = (
+                f"Your {product_label} access is active until {end_date}.\n"
+                f"If the invite link was not generated automatically, contact support here:\n{SUPPORT_URL}"
+                if language == "en"
+                else f"Ваш доступ к {product_label} активирован до {end_date}.\n"
+                f"Если ссылка-приглашение не была сгенерирована автоматически, напишите в поддержку сюда:\n{SUPPORT_URL}"
             )
 
     await bot.send_message(user_id, text, parse_mode="HTML")
