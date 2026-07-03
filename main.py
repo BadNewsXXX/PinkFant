@@ -70,6 +70,13 @@ BETATRANSFER_FAIL_URL = os.getenv("BETATRANSFER_FAIL_URL")
 BETATRANSFER_CURRENCY = os.getenv("BETATRANSFER_CURRENCY", "USD").upper()
 BETATRANSFER_PAYMENT_SYSTEM = (os.getenv("BETATRANSFER_PAYMENT_SYSTEM") or "").strip()
 BETATRANSFER_FULL_CALLBACK = int(os.getenv("BETATRANSFER_FULL_CALLBACK", "1"))
+CRYPTOPAY_API_TOKEN = os.getenv("CRYPTOPAY_API_TOKEN")
+CRYPTOPAY_BASE_URL = os.getenv("CRYPTOPAY_BASE_URL", "https://pay.crypt.bot").rstrip("/")
+CRYPTOPAY_ACCEPTED_ASSETS = os.getenv("CRYPTOPAY_ACCEPTED_ASSETS", "USDT,TON,LTC")
+CRYPTOPAY_FIAT = os.getenv("CRYPTOPAY_FIAT", "USD").upper()
+CRYPTOPAY_EXPIRES_IN = int(os.getenv("CRYPTOPAY_EXPIRES_IN", "3600"))
+CRYPTOPAY_CALLBACK_URL = os.getenv("CRYPTOPAY_CALLBACK_URL")
+CRYPTOPAY_CALLBACK_SECRET = os.getenv("CRYPTOPAY_CALLBACK_SECRET")
 MENU_VARIANTS = {key: tuple(values.values()) for key, values in MENU_TEXT.items()}
 ADMIN_PRODUCT_CHOICES = {
     1: "anxieest",
@@ -145,6 +152,10 @@ def build_betatransfer_order_id(user_id: int, product_code: str, plan_code: str)
     plan_part = plan_map.get(plan_code, "pln")
     suffix = uuid.uuid4().hex[:8]
     return f"bt-{user_id}-{product_part}-{plan_part}-{suffix}"[:40]
+
+
+def build_cryptopay_payload(user_id: int, product_code: str, plan_code: str) -> str:
+    return f"cryptopay:{user_id}:{product_code}:{plan_code}:{uuid.uuid4().hex[:12]}"
 
 
 BETATRANSFER_SIGN_FIELDS = [
@@ -397,6 +408,134 @@ async def create_betatransfer_checkout(user_id: int, product_code: str, plan_cod
         "status": status,
         "locale": locale,
     }
+
+
+async def cryptopay_get_me() -> dict:
+    if not CRYPTOPAY_API_TOKEN:
+        raise RuntimeError("CryptoPay API token is not configured.")
+
+    headers = {"Crypto-Pay-API-Token": CRYPTOPAY_API_TOKEN}
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{CRYPTOPAY_BASE_URL}/api/getMe", headers=headers) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                raise RuntimeError(f"CryptoPay error {response.status}: {response_text}")
+            data = json.loads(response_text)
+
+    if not data.get("ok"):
+        raise RuntimeError(f"CryptoPay API error: {data.get('error', 'unknown_error')}")
+    return data["result"]
+
+
+async def create_cryptopay_invoice(user_id: int, product_code: str, plan_code: str) -> dict:
+    if not CRYPTOPAY_API_TOKEN:
+        raise RuntimeError("CryptoPay API token is not configured.")
+
+    plan = PRODUCTS[product_code]["plans"][plan_code]
+    if plan.get("support_only"):
+        raise ValueError("This plan is support-only and cannot be paid automatically.")
+
+    description = f"{product_name(product_code, 'en')} | {plan_name(product_code, plan_code, 'en')} | user {user_id}"
+    payload_value = build_cryptopay_payload(user_id, product_code, plan_code)
+    payload = {
+        "currency_type": "fiat",
+        "fiat": CRYPTOPAY_FIAT,
+        "accepted_assets": CRYPTOPAY_ACCEPTED_ASSETS,
+        "amount": f"{float(plan['price_usd']):.2f}",
+        "description": description,
+        "payload": payload_value,
+        "expires_in": CRYPTOPAY_EXPIRES_IN,
+        "allow_comments": False,
+        "allow_anonymous": True,
+    }
+    headers = {
+        "Crypto-Pay-API-Token": CRYPTOPAY_API_TOKEN,
+        "Content-Type": "application/json",
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{CRYPTOPAY_BASE_URL}/api/createInvoice",
+            json=payload,
+            headers=headers,
+        ) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                raise RuntimeError(f"CryptoPay error {response.status}: {response_text}")
+            data = json.loads(response_text)
+
+    if not data.get("ok"):
+        raise RuntimeError(f"CryptoPay API error: {data.get('error', 'unknown_error')}")
+
+    invoice = data["result"]
+    invoice_id = invoice.get("invoice_id")
+    if invoice_id is None:
+        raise RuntimeError(f"Unexpected CryptoPay response: {invoice}")
+
+    accepted_assets = invoice.get("accepted_assets")
+    accepted_assets_value = None
+    if isinstance(accepted_assets, list):
+        accepted_assets_value = ",".join(str(asset) for asset in accepted_assets)
+    elif isinstance(accepted_assets, str):
+        accepted_assets_value = accepted_assets
+
+    await db.create_cryptopay_payment(
+        user_id=user_id,
+        product_code=product_code,
+        plan_code=plan_code,
+        invoice_id=int(invoice_id),
+        payload=str(invoice.get("payload") or payload_value),
+        amount=float(invoice.get("amount") or plan["price_usd"]),
+        fiat=str(invoice.get("fiat") or CRYPTOPAY_FIAT),
+        accepted_assets=accepted_assets_value,
+        description=str(invoice.get("description") or description),
+        status=str(invoice.get("status") or "active"),
+        bot_invoice_url=invoice.get("bot_invoice_url"),
+        mini_app_invoice_url=invoice.get("mini_app_invoice_url"),
+        web_app_invoice_url=invoice.get("web_app_invoice_url"),
+    )
+
+    return {
+        "invoice_id": invoice_id,
+        "status": invoice.get("status"),
+        "amount": invoice.get("amount"),
+        "fiat": invoice.get("fiat"),
+        "accepted_assets": invoice.get("accepted_assets"),
+        "bot_invoice_url": invoice.get("bot_invoice_url"),
+        "mini_app_invoice_url": invoice.get("mini_app_invoice_url"),
+        "web_app_invoice_url": invoice.get("web_app_invoice_url"),
+        "payload": invoice.get("payload") or payload_value,
+    }
+
+
+async def get_cryptopay_invoice_info(invoice_id: int) -> dict:
+    if not CRYPTOPAY_API_TOKEN:
+        raise RuntimeError("CryptoPay API token is not configured.")
+
+    headers = {
+        "Crypto-Pay-API-Token": CRYPTOPAY_API_TOKEN,
+        "Content-Type": "application/json",
+    }
+    payload = {"invoice_ids": str(invoice_id)}
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{CRYPTOPAY_BASE_URL}/api/getInvoices",
+            json=payload,
+            headers=headers,
+        ) as response:
+            response_text = await response.text()
+            if response.status >= 400:
+                raise RuntimeError(f"CryptoPay error {response.status}: {response_text}")
+            data = json.loads(response_text)
+
+    if not data.get("ok"):
+        raise RuntimeError(f"CryptoPay API error: {data.get('error', 'unknown_error')}")
+
+    invoices = data.get("result", {}).get("items") or data.get("result") or []
+    if not invoices:
+        raise RuntimeError("CryptoPay invoice not found.")
+    return invoices[0]
 
 
 async def get_betatransfer_payment_info(order_id: str | None = None, payment_id: str | None = None) -> dict:
@@ -1616,6 +1755,209 @@ async def platega_test(message: types.Message):
     )
 
 
+@dp.message(Command("cp_me"))
+async def cryptopay_me(message: types.Message):
+    if message.from_user.id != ADMIN_USER_ID:
+        await message.reply("You are not authorized to use this command.")
+        return
+
+    try:
+        app_info = await cryptopay_get_me()
+    except Exception as e:
+        await message.reply(f"Failed to call CryptoPay getMe: {e}")
+        return
+
+    await message.reply(
+        "CryptoPay app info:\n"
+        f"App ID: {app_info.get('app_id', '-')}\n"
+        f"Name: {app_info.get('name', '-')}\n"
+        f"Payment processing bot username: {app_info.get('payment_processing_bot_username', '-')}"
+    )
+
+
+@dp.message(Command("cp_test"))
+async def cryptopay_test(message: types.Message):
+    if message.from_user.id != ADMIN_USER_ID:
+        await message.reply("You are not authorized to use this command.")
+        return
+
+    args = message.text.split()
+    if len(args) < 3:
+        await message.reply(
+            "Usage:\n"
+            "/cp_test 1 lifetime\n"
+            "/cp_test 2 monthly\n"
+            "/cp_test 2 quarterly\n"
+            "/cp_test 3 yearly\n"
+            "/cp_test 2 monthly <user_id>"
+        )
+        return
+
+    try:
+        product_choice = int(args[1])
+    except ValueError:
+        await message.reply("Invalid product choice.")
+        return
+
+    product_code = ADMIN_PRODUCT_CHOICES.get(product_choice)
+    if product_code is None:
+        await message.reply("Unknown product. Use 1 for Anxieest, 2 for CooMeet, 3 for Mandy Rose.")
+        return
+
+    plan_code = args[2].strip().lower()
+    plan = PRODUCTS.get(product_code, {}).get("plans", {}).get(plan_code)
+    if plan is None:
+        await message.reply(f"Unknown plan '{plan_code}' for {product_name(product_code, 'en')}.")
+        return
+    if plan.get("support_only"):
+        await message.reply("This plan is support-only and cannot be used for automatic CryptoPay testing.")
+        return
+
+    target_user_id = message.from_user.id
+    if len(args) >= 4:
+        try:
+            target_user_id = int(args[3])
+        except ValueError:
+            await message.reply("Invalid user_id.")
+            return
+
+    try:
+        invoice = await create_cryptopay_invoice(target_user_id, product_code, plan_code)
+    except Exception as e:
+        await message.reply(f"Failed to create CryptoPay invoice: {e}")
+        return
+
+    await message.reply(
+        "CryptoPay test invoice created.\n"
+        f"User ID: {target_user_id}\n"
+        f"Product: {product_name(product_code, 'en')}\n"
+        f"Plan: {plan_name(product_code, plan_code, 'en')}\n"
+        f"Amount: {invoice['amount']} {invoice['fiat']}\n"
+        f"Invoice ID: {invoice['invoice_id']}\n"
+        f"Status: {invoice['status']}\n"
+        f"Accepted assets: {invoice['accepted_assets'] or '-'}\n"
+        f"Bot URL:\n{invoice['bot_invoice_url'] or '-'}\n\n"
+        f"Mini App URL:\n{invoice['mini_app_invoice_url'] or '-'}\n\n"
+        f"Web URL:\n{invoice['web_app_invoice_url'] or '-'}"
+    )
+
+
+@dp.message(Command("cp_info"))
+async def cryptopay_info(message: types.Message):
+    if message.from_user.id != ADMIN_USER_ID:
+        await message.reply("You are not authorized to use this command.")
+        return
+
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        await message.reply("Usage:\n/cp_info <invoice_id>")
+        return
+
+    try:
+        invoice_id = int(args[1].strip())
+    except ValueError:
+        await message.reply("Invalid invoice_id.")
+        return
+
+    try:
+        invoice = await get_cryptopay_invoice_info(invoice_id)
+    except Exception as e:
+        await message.reply(f"Failed to fetch CryptoPay invoice: {e}")
+        return
+
+    await message.reply(
+        "CryptoPay invoice info:\n"
+        f"Invoice ID: {invoice.get('invoice_id', '-')}\n"
+        f"Status: {invoice.get('status', '-')}\n"
+        f"Amount: {invoice.get('amount', '-')}\n"
+        f"Fiat: {invoice.get('fiat', '-')}\n"
+        f"Accepted assets: {invoice.get('accepted_assets', '-')}\n"
+        f"Paid asset: {invoice.get('paid_asset', '-')}\n"
+        f"Paid amount: {invoice.get('paid_amount', '-')}\n"
+        f"Fee asset: {invoice.get('fee_asset', '-')}\n"
+        f"Fee amount: {invoice.get('fee_amount', '-')}\n"
+        f"Payload: {invoice.get('payload', '-')}"
+    )
+
+
+@dp.message(Command("cp_sync"))
+async def cryptopay_sync(message: types.Message):
+    if message.from_user.id != ADMIN_USER_ID:
+        await message.reply("You are not authorized to use this command.")
+        return
+
+    args = message.text.split(maxsplit=1)
+    if len(args) < 2:
+        await message.reply("Usage:\n/cp_sync <invoice_id>")
+        return
+
+    try:
+        invoice_id = int(args[1].strip())
+    except ValueError:
+        await message.reply("Invalid invoice_id.")
+        return
+
+    payment = await db.get_cryptopay_payment_by_invoice_id(invoice_id)
+    if payment is None:
+        await message.reply("No active payment found.")
+        return
+
+    try:
+        invoice = await get_cryptopay_invoice_info(invoice_id)
+    except Exception as e:
+        await message.reply(f"Failed to fetch CryptoPay invoice: {e}")
+        return
+
+    status = str(invoice.get("status") or payment.status or "").lower()
+    await db.update_cryptopay_payment_status(
+        invoice_id=invoice_id,
+        status=status or payment.status,
+        callback_payload=invoice,
+        callback_processed=payment.callback_processed,
+        paid_asset=str(invoice.get("paid_asset") or "").strip() or None,
+        paid_amount=str(invoice.get("paid_amount") or "").strip() or None,
+        paid_fiat_rate=str(invoice.get("paid_fiat_rate") or "").strip() or None,
+        fee_asset=str(invoice.get("fee_asset") or "").strip() or None,
+        fee_amount=str(invoice.get("fee_amount") or "").strip() or None,
+    )
+
+    refreshed_payment = await db.get_cryptopay_payment_by_invoice_id(invoice_id)
+    if refreshed_payment is None:
+        await message.reply("Payment disappeared after sync.")
+        return
+
+    if status != "paid":
+        await message.reply(f"Invoice synced. Current status: {status or 'unknown'}.")
+        return
+
+    if refreshed_payment.callback_processed or refreshed_payment.activated_at is not None:
+        await message.reply("Invoice is already marked as paid and processed.")
+        return
+
+    try:
+        result = await db.activate_subscription(
+            refreshed_payment.user_id,
+            refreshed_payment.product_code,
+            refreshed_payment.plan_code,
+        )
+        await db.mark_cryptopay_payment_activated(invoice_id)
+        try:
+            await send_platega_access_result_to_user(refreshed_payment.user_id, result)
+        except Exception:
+            logging.exception("CryptoPay sync activated payment, but failed to notify user.")
+    except Exception as e:
+        logging.exception("Failed to activate CryptoPay payment during sync for invoice %s", invoice_id)
+        await message.reply(f"Invoice is paid, but activation failed: {e}")
+        return
+
+    await message.reply(
+        f"Invoice {invoice_id} synced and activated.\n"
+        f"User ID: {refreshed_payment.user_id}\n"
+        f"Product: {product_name(refreshed_payment.product_code, 'en')}\n"
+        f"Plan: {plan_name(refreshed_payment.product_code, refreshed_payment.plan_code, 'en')}"
+    )
+
+
 @dp.message(Command("beta_test"))
 async def betatransfer_test(message: types.Message):
     if message.from_user.id != ADMIN_USER_ID:
@@ -1964,10 +2306,43 @@ async def special_payment_selected(callback: CallbackQuery):
         return
 
     if action == "cryptopay":
-        text = "CryptoPay will be added later." if language == "en" else "CryptoPay добавим чуть позже."
+        try:
+            invoice = await create_cryptopay_invoice(user_id, product_code, plan_code)
+        except Exception as e:
+            await callback.message.edit_text(
+                (
+                    f"Не удалось создать счёт Crypto Pay: {e}"
+                    if language == "ru"
+                    else f"Failed to create Crypto Pay invoice: {e}"
+                ),
+                reply_markup=kb.simple_back(language, f"specialpay:crypto:{product_code}:{plan_code}"),
+            )
+            return
+
+        payment_url = (
+            invoice.get("bot_invoice_url")
+            or invoice.get("mini_app_invoice_url")
+            or invoice.get("web_app_invoice_url")
+        )
+        if not payment_url:
+            await callback.message.edit_text(
+                "Не удалось получить ссылку на оплату Crypto Pay."
+                if language == "ru"
+                else "Failed to get Crypto Pay payment URL.",
+                reply_markup=kb.simple_back(language, f"specialpay:crypto:{product_code}:{plan_code}"),
+            )
+            return
+
+        text = (
+            f"Счёт создан на {invoice['amount']} {invoice['fiat']}.\n"
+            "Откройте Crypto Pay по кнопке ниже и проверьте доступные способы оплаты."
+            if language == "ru"
+            else f"Invoice created for {invoice['amount']} {invoice['fiat']}.\n"
+            "Open Crypto Pay using the button below and check the available payment methods."
+        )
         await callback.message.edit_text(
             text,
-            reply_markup=kb.simple_back(language, f"specialpay:crypto:{product_code}:{plan_code}"),
+            reply_markup=kb.cryptopay_link(language, payment_url, f"specialpay:crypto:{product_code}:{plan_code}"),
         )
         return
 
@@ -2255,6 +2630,16 @@ async def betatransfer_healthcheck(_: web.Request) -> web.Response:
     )
 
 
+async def cryptopay_healthcheck(_: web.Request) -> web.Response:
+    return web.json_response(
+        {
+            "ok": True,
+            "service": "cryptopay-callback",
+            "callback_url": CRYPTOPAY_CALLBACK_URL,
+        }
+    )
+
+
 async def parse_callback_payload(request: web.Request) -> dict:
     content_type = (request.content_type or "").lower()
     if "application/json" in content_type:
@@ -2277,6 +2662,15 @@ def verify_betatransfer_callback_signature(payload: dict) -> bool:
 
     expected_signature = hashlib.md5(f"{amount}{order_id}{BETATRANSFER_SECRET_KEY}".encode("utf-8")).hexdigest()
     return provided_signature == expected_signature
+
+
+def verify_cryptopay_callback_signature(raw_body: bytes, signature_header: str | None) -> bool:
+    if not CRYPTOPAY_API_TOKEN or not signature_header:
+        return False
+
+    secret = hashlib.sha256(CRYPTOPAY_API_TOKEN.encode("utf-8")).digest()
+    expected_signature = hmac.new(secret, raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected_signature, signature_header.strip().lower())
 
 
 async def platega_callback(request: web.Request) -> web.Response:
@@ -2393,10 +2787,89 @@ async def betatransfer_callback(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "message": "payment confirmed and access granted"})
 
 
+async def cryptopay_callback(request: web.Request) -> web.Response:
+    if not CRYPTOPAY_CALLBACK_SECRET:
+        return web.json_response({"ok": False, "error": "callback_secret_not_configured"}, status=500)
+
+    request_secret = request.match_info.get("secret", "")
+    if request_secret != CRYPTOPAY_CALLBACK_SECRET:
+        return web.json_response({"ok": False, "error": "invalid_callback_secret"}, status=403)
+
+    raw_body = await request.read()
+    signature_header = request.headers.get("crypto-pay-api-signature")
+    if not verify_cryptopay_callback_signature(raw_body, signature_header):
+        logging.warning("CryptoPay callback signature mismatch")
+        return web.json_response({"ok": False, "error": "invalid_signature"}, status=400)
+
+    try:
+        payload = json.loads(raw_body.decode("utf-8"))
+    except Exception:
+        return web.json_response({"ok": False, "error": "invalid_json"}, status=400)
+
+    if str(payload.get("update_type") or "").strip() != "invoice_paid":
+        return web.json_response({"ok": True, "message": "ignored_update_type"})
+
+    invoice_payload = payload.get("payload") or {}
+    invoice_id_raw = invoice_payload.get("invoice_id")
+    if invoice_id_raw is None:
+        return web.json_response({"ok": False, "error": "missing_invoice_id"}, status=400)
+
+    try:
+        invoice_id = int(invoice_id_raw)
+    except (TypeError, ValueError):
+        return web.json_response({"ok": False, "error": "invalid_invoice_id"}, status=400)
+
+    payment = await db.get_cryptopay_payment_by_invoice_id(invoice_id)
+    if payment is None:
+        return web.json_response({"ok": False, "error": "unknown_invoice"}, status=404)
+
+    status = str(invoice_payload.get("status") or payment.status or "").lower()
+    await db.update_cryptopay_payment_status(
+        invoice_id=invoice_id,
+        status=status or payment.status,
+        callback_payload=payload,
+        callback_processed=payment.callback_processed,
+        paid_asset=str(invoice_payload.get("paid_asset") or "").strip() or None,
+        paid_amount=str(invoice_payload.get("paid_amount") or "").strip() or None,
+        paid_fiat_rate=str(invoice_payload.get("paid_fiat_rate") or "").strip() or None,
+        fee_asset=str(invoice_payload.get("fee_asset") or "").strip() or None,
+        fee_amount=str(invoice_payload.get("fee_amount") or "").strip() or None,
+    )
+
+    refreshed_payment = await db.get_cryptopay_payment_by_invoice_id(invoice_id)
+    if refreshed_payment is None:
+        return web.json_response({"ok": False, "error": "payment_disappeared"}, status=500)
+
+    if status != "paid":
+        return web.json_response({"ok": True, "message": f"status {status or 'unknown'} recorded"})
+
+    if refreshed_payment.callback_processed or refreshed_payment.activated_at is not None:
+        return web.json_response({"ok": True, "message": "duplicate callback ignored"})
+
+    try:
+        result = await db.activate_subscription(
+            refreshed_payment.user_id,
+            refreshed_payment.product_code,
+            refreshed_payment.plan_code,
+        )
+        await db.mark_cryptopay_payment_activated(invoice_id)
+        try:
+            await send_platega_access_result_to_user(refreshed_payment.user_id, result)
+        except Exception:
+            logging.exception("CryptoPay payment paid, but failed to notify user.")
+    except Exception:
+        logging.exception("Failed to activate CryptoPay payment for invoice %s", invoice_id)
+        return web.json_response({"ok": False, "error": "activation_failed"}, status=500)
+
+    return web.json_response({"ok": True, "message": "payment confirmed and access granted"})
+
+
 async def run_platega_http_server():
     app = web.Application()
     app.router.add_get("/api/betatransfer/health", betatransfer_healthcheck)
     app.router.add_post("/api/betatransfer/callback", betatransfer_callback)
+    app.router.add_get("/api/cryptopay/health", cryptopay_healthcheck)
+    app.router.add_post("/api/cryptopay/callback/{secret}", cryptopay_callback)
     app.router.add_get("/api/platega/health", platega_healthcheck)
     app.router.add_post("/api/platega/callback", platega_callback)
 

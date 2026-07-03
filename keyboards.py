@@ -310,6 +310,17 @@ def payment_link(language: str, payment_url: str, back_callback: str) -> InlineK
     )
 
 
+def cryptopay_link(language: str, payment_url: str, back_callback: str) -> InlineKeyboardMarkup:
+    open_label = "Оплатить Crypto Pay" if language == "ru" else "Pay with Crypto Pay"
+    back_label = "Назад" if language == "ru" else "Back"
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=open_label, url=payment_url)],
+            [InlineKeyboardButton(text=back_label, callback_data=back_callback)],
+        ]
+    )
+
+
 def simple_back(language: str, callback_data: str) -> InlineKeyboardMarkup:
     back_label = "Назад" if language == "ru" else "Back"
     return InlineKeyboardMarkup(

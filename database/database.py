@@ -154,6 +154,36 @@ class BetaTransferPayment(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
+class CryptoPayPayment(Base):
+    __tablename__ = "cryptopay_payments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, nullable=False, index=True)
+    product_code = Column(String(50), nullable=False)
+    plan_code = Column(String(50), nullable=False)
+    invoice_id = Column(BigInteger, nullable=False, unique=True)
+    payload = Column(String(4096), nullable=False, unique=True)
+    amount = Column(Float, nullable=False)
+    fiat = Column(String(10), nullable=False, server_default="USD")
+    accepted_assets = Column(String(255), nullable=True)
+    description = Column(String(1024), nullable=True)
+    status = Column(String(50), nullable=False, server_default="active")
+    bot_invoice_url = Column(String(2048), nullable=True)
+    mini_app_invoice_url = Column(String(2048), nullable=True)
+    web_app_invoice_url = Column(String(2048), nullable=True)
+    paid_asset = Column(String(20), nullable=True)
+    paid_amount = Column(String(50), nullable=True)
+    paid_fiat_rate = Column(String(50), nullable=True)
+    fee_asset = Column(String(20), nullable=True)
+    fee_amount = Column(String(50), nullable=True)
+    callback_processed = Column(Boolean, nullable=False, server_default="false")
+    callback_received_at = Column(DateTime(timezone=True), nullable=True)
+    activated_at = Column(DateTime(timezone=True), nullable=True)
+    raw_callback = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -198,6 +228,12 @@ async def init_db():
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_betatransfer_payments_provider_payment_id "
                 "ON betatransfer_payments (provider_payment_id)"
             )
+        )
+        await conn.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_cryptopay_payments_invoice_id ON cryptopay_payments (invoice_id)")
+        )
+        await conn.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ix_cryptopay_payments_payload ON cryptopay_payments (payload)")
         )
 
 
@@ -767,6 +803,124 @@ async def mark_betatransfer_payment_activated(order_id: str):
             select(BetaTransferPayment)
             .where(BetaTransferPayment.order_id == order_id)
             .order_by(BetaTransferPayment.id.desc())
+        )
+        if payment is None:
+            return None
+
+        payment.activated_at = datetime.now(timezone.utc)
+        payment.callback_processed = True
+        payment.updated_at = datetime.now(timezone.utc)
+        await session.commit()
+        await session.refresh(payment)
+        return payment
+
+
+async def create_cryptopay_payment(
+    user_id: int,
+    product_code: str,
+    plan_code: str,
+    invoice_id: int,
+    payload: str,
+    amount: float,
+    fiat: str,
+    accepted_assets: str | None,
+    description: str | None,
+    status: str,
+    bot_invoice_url: str | None = None,
+    mini_app_invoice_url: str | None = None,
+    web_app_invoice_url: str | None = None,
+):
+    async with async_session() as session:
+        payment = CryptoPayPayment(
+            user_id=user_id,
+            product_code=product_code,
+            plan_code=plan_code,
+            invoice_id=invoice_id,
+            payload=payload,
+            amount=amount,
+            fiat=fiat,
+            accepted_assets=accepted_assets,
+            description=description,
+            status=status,
+            bot_invoice_url=bot_invoice_url,
+            mini_app_invoice_url=mini_app_invoice_url,
+            web_app_invoice_url=web_app_invoice_url,
+            updated_at=datetime.now(timezone.utc),
+        )
+        session.add(payment)
+        await session.commit()
+        await session.refresh(payment)
+        return payment
+
+
+async def get_cryptopay_payment_by_invoice_id(invoice_id: int):
+    async with async_session() as session:
+        return await session.scalar(
+            select(CryptoPayPayment)
+            .where(CryptoPayPayment.invoice_id == invoice_id)
+            .order_by(CryptoPayPayment.id.desc())
+        )
+
+
+async def get_cryptopay_payment_by_payload(payload: str):
+    async with async_session() as session:
+        return await session.scalar(
+            select(CryptoPayPayment)
+            .where(CryptoPayPayment.payload == payload)
+            .order_by(CryptoPayPayment.id.desc())
+        )
+
+
+async def update_cryptopay_payment_status(
+    invoice_id: int,
+    status: str,
+    callback_payload: dict | None = None,
+    callback_processed: bool | None = None,
+    paid_asset: str | None = None,
+    paid_amount: str | None = None,
+    paid_fiat_rate: str | None = None,
+    fee_asset: str | None = None,
+    fee_amount: str | None = None,
+):
+    async with async_session() as session:
+        payment = await session.scalar(
+            select(CryptoPayPayment)
+            .where(CryptoPayPayment.invoice_id == invoice_id)
+            .order_by(CryptoPayPayment.id.desc())
+        )
+        if payment is None:
+            return None
+
+        payment.status = status
+        payment.updated_at = datetime.now(timezone.utc)
+
+        if callback_processed is not None:
+            payment.callback_processed = callback_processed
+        if paid_asset is not None:
+            payment.paid_asset = paid_asset
+        if paid_amount is not None:
+            payment.paid_amount = paid_amount
+        if paid_fiat_rate is not None:
+            payment.paid_fiat_rate = paid_fiat_rate
+        if fee_asset is not None:
+            payment.fee_asset = fee_asset
+        if fee_amount is not None:
+            payment.fee_amount = fee_amount
+        if callback_payload is not None:
+            payment.raw_callback = json.dumps(callback_payload, ensure_ascii=False)
+            payment.callback_received_at = datetime.now(timezone.utc)
+
+        await session.commit()
+        await session.refresh(payment)
+        return payment
+
+
+async def mark_cryptopay_payment_activated(invoice_id: int):
+    async with async_session() as session:
+        payment = await session.scalar(
+            select(CryptoPayPayment)
+            .where(CryptoPayPayment.invoice_id == invoice_id)
+            .order_by(CryptoPayPayment.id.desc())
         )
         if payment is None:
             return None
