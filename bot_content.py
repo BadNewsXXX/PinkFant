@@ -487,7 +487,8 @@ SUPPORT_TEXT = {
         "Open Subscriptions and choose any product you’re interested in. Then tap Content Preview to view sample content before purchasing.\n\n"
         "<b>5. Will new models and categories be added?</b> 😈\n\n"
         "Yes, we plan to expand our content library based on the interests of our audience.\n"
-        "If you’d like to influence future updates, take part in the poll using the link below.\n\n\n"
+        "If you’d like to influence future updates, take part in the poll using the link below."
+        "https://t.me/wwe_superstarsMRs\n\n\n"
         "<b>Need more help?</b> 🤝\n"
         f"If you read the all answers above and still need help, contact support: {SUPPORT_URL}\n\n\n\n"
         "Privacy policy: https://telegra.ph/Privacy-Policy-06-09-143\n"
@@ -510,7 +511,8 @@ SUPPORT_TEXT = {
         "Зайдите в Подписки, далее выберите любой интересующий вас продукт и там выберите 'Превью контента'.\n\n"
         "<b>5. Будут ли добавляться новые модели и направления?</b> 😈\n\n"
         "Да, мы планируем расширять библиотеку контента на основе интересов нашей аудитории.\n\n"
-        "Если вы хотите повлиять на будущие обновления, примите участие в опросе по ссылке ниже.\n\n\n"
+        "Если вы хотите повлиять на будущие обновления, примите участие в опросе по ссылке ниже."
+        "https://t.me/wwe_superstarsMRs\n\n\n"
         f"Если вы прочитали ответы на вопросы выше, но не нашли решение, напишите в поддержку: {SUPPORT_URL}\n\n\n\n"
         "Политика конфиденциальности: https://telegra.ph/Politika-konfidencialnosti-04-01-26\n"
         "Пользовательское соглашение: https://telegra.ph/Polzovatelskoe-soglashenie-04-01-19"
@@ -521,7 +523,7 @@ FAQ_TEXT = {
     "anxieest": {
         "en": (
             "<b>Anxieest</b> is known for the funny and corny jokes she posts on TikTok and Instagram.\n\n"
-            "At one point, she created an OnlyFans “just for fun,” as she put it — and for a long time, that really seemed to be the case, since there was no content there at all. But then something changed.\n"
+            "At one point, she created an OnlyFans “just for fun,” as she put it - and for a long time, that really seemed to be the case, since there was no content there at all. But then something changed.\n"
             "One day, I checked her OnlyFans and was surprised to see that she had started posting lifestyle content: selfies, everyday moments, and similar material that usually isn’t what people come to OF for. Then, unexpectedly, she posted 2 photos of her juicy ass and later uploaded a video featuring a butt plug and masturbation. I immediately bought this content. It cost me $30 for that single video.\n"
             "After some time, it seems she became concerned about her career, or had other reasons, and ended up deleting everything from her OnlyFans. Now the page is completely empty, and that content can’t be found anywhere.\n\n"
             "Here’s our offer for you! 🔥\n"
@@ -627,7 +629,7 @@ UI_TEXT = {
     },
     "products_welcome": {
         "en": "Welcome to PinkLeak ✨\n\nA private collection of exclusive content 😈\nChoose an option below to get started.",
-        "ru": "Добро пожаловать в PinkLeak ✨\n\nКоллекция эксклюзивного контента ждёт тебя 😈\nДля ознакомления с нашим контентом, выберите вариант ниже из списка.",
+        "ru": "Добро пожаловать в PinkLeak ✨\n\nКоллекция эксклюзивного контента ждёт тебя 😈\nДля ознакомления с нашими продуктами выберите вариант ниже из списка.",
     },
     "menu_ready": {
         "en": "Menu",
@@ -662,8 +664,8 @@ UI_TEXT = {
         "ru": "Отменить оплату ❌",
     },
     "buy_access": {
-        "en": "Buy access 🔒",
-        "ru": "Купить доступ 🔒",
+        "en": "Get Access 🔑",
+        "ru": "Получить доступ 🔑",
     },
     "content_preview": {
         "en": "Content Preview ✅",
