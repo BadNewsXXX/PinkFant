@@ -836,7 +836,7 @@ async def ping_pong(websocket):
 
 
 async def authenticate_and_ping():
-    url = "wss://ws.okx.com:8443/ws/v5/business"
+    url = "wss://ws.okx.com/ws/v5/business"
     async with websockets.connect(url, open_timeout=15, ping_timeout=None, ping_interval=None) as websocket:
         print("WebSocket connection established")
 
@@ -855,8 +855,26 @@ async def authenticate_and_ping():
             ],
         }
         await websocket.send(json.dumps(login_message))
-        auth_response = await websocket.recv()
-        print(f"Authentication response: {auth_response}")
+        # Notices may arrive before the login acknowledgement.
+        loop = asyncio.get_running_loop()
+        login_deadline = loop.time() + 15
+        while True:
+            remaining = login_deadline - loop.time()
+            if remaining <= 0:
+                raise TimeoutError("OKX login confirmation timed out")
+            auth_response = await asyncio.wait_for(websocket.recv(), timeout=remaining)
+            auth_data = json.loads(auth_response)
+            if auth_data.get("event") == "notice":
+                logging.warning("OKX notice: %s", auth_data.get("msg"))
+                continue
+            if auth_data.get("event") == "error":
+                raise RuntimeError(f"OKX authentication error: {auth_response}")
+            if auth_data.get("event") != "login":
+                continue
+            if str(auth_data.get("code")) != "0":
+                raise RuntimeError(f"OKX login failed: {auth_response}")
+            print(f"Authentication response: {auth_response}")
+            break
 
         subscribe_message = {
             "op": "subscribe",
